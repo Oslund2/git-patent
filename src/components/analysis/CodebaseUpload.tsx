@@ -39,8 +39,11 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
       // Use GitHub token from OAuth if available
       const githubToken = session?.provider_token || undefined;
 
-      setProgress({ step: 'fetching', progress: 5, message: 'Downloading repository...' });
-      const { files, metadata } = await ingestFromGitHub(repoUrl.trim(), githubToken);
+      setProgress({ step: 'fetching', progress: 2, message: 'Fetching repository tree...' });
+      const { files, metadata } = await ingestFromGitHub(repoUrl.trim(), githubToken, (fetched, total) => {
+        const pct = 2 + Math.round((fetched / total) * 6);
+        setProgress({ step: 'fetching', progress: pct, message: `Fetching files... ${fetched}/${total}` });
+      });
 
       await updateProject(project.id, {
         source_metadata: metadata as unknown as Record<string, unknown>,

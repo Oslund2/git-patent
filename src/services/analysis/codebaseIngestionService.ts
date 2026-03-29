@@ -1,10 +1,11 @@
 import JSZip from 'jszip';
 import type { CodeFile } from '../../types';
-import { downloadRepoZip, fetchRepoMetadata, parseGitHubUrl } from './githubService';
+import { fetchRepoMetadata, fetchRepoTree, fetchRepoFiles, parseGitHubUrl } from './githubService';
 
 const MAX_FILE_SIZE = 100 * 1024; // 100KB per file
 const MAX_FILES = 500;
 const MAX_ZIP_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_GITHUB_FILES = 80; // Limit API calls for GitHub (each file = 1 request)
 
 const SKIP_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', '.next', '__pycache__',
@@ -80,7 +81,6 @@ async function extractFromZip(zipData: ArrayBuffer | File): Promise<CodeFile[]> 
   const toProcess = entries.slice(0, MAX_FILES);
 
   for (const path of toProcess) {
-    // Find the original zip entry (with the prefix)
     const originalEntry = Object.entries(zip.files).find(([p]) => normalizeZipPath(p) === path);
     if (!originalEntry) continue;
 
@@ -88,7 +88,7 @@ async function extractFromZip(zipData: ArrayBuffer | File): Promise<CodeFile[]> 
     try {
       const content = await file.async('string');
       if (content.length > MAX_FILE_SIZE) continue;
-      if (content.includes('\0')) continue; // binary file
+      if (content.includes('\0')) continue;
 
       const language = detectLanguage(path);
       if (language === 'unknown') continue;
@@ -114,18 +114,58 @@ export async function ingestFromZip(file: File): Promise<CodeFile[]> {
   return extractFromZip(file);
 }
 
-export async function ingestFromGitHub(repoUrl: string, token?: string): Promise<{ files: CodeFile[]; metadata: ReturnType<typeof fetchRepoMetadata> extends Promise<infer T> ? T : never }> {
+/**
+ * Ingest from GitHub using the CORS-friendly Git Trees + Blobs API.
+ * 1. Fetch repo metadata (1 request)
+ * 2. Fetch full tree (1 request)
+ * 3. Filter to analyzable files
+ * 4. Fetch each file's content via Blobs API (1 request per file, batched)
+ */
+export async function ingestFromGitHub(
+  repoUrl: string,
+  token?: string,
+  onProgress?: (fetched: number, total: number) => void,
+): Promise<{ files: CodeFile[]; metadata: Awaited<ReturnType<typeof fetchRepoMetadata>> }> {
   const parsed = parseGitHubUrl(repoUrl);
   if (!parsed) throw new Error('Invalid GitHub URL');
 
+  // Step 1: Get repo metadata
   const metadata = await fetchRepoMetadata(repoUrl, token);
-  const zipBuffer = await downloadRepoZip(parsed.owner, parsed.repo, metadata.defaultBranch, token);
 
-  if (zipBuffer.byteLength > MAX_ZIP_SIZE) {
-    throw new Error(`Repository too large (${(zipBuffer.byteLength / 1024 / 1024).toFixed(1)}MB). Maximum is 50MB.`);
-  }
+  // Step 2: Get full file tree (single request, CORS-friendly)
+  const tree = await fetchRepoTree(parsed.owner, parsed.repo, metadata.defaultBranch, token);
 
-  const files = await extractFromZip(zipBuffer);
+  // Step 3: Filter to analyzable code files
+  const analyzable = tree
+    .filter(entry => !shouldSkipFile(entry.path))
+    .filter(entry => {
+      const lang = detectLanguage(entry.path);
+      return lang !== 'unknown';
+    })
+    .filter(entry => !entry.size || entry.size <= MAX_FILE_SIZE);
+
+  // Prioritize code files over config/docs, take top N
+  const codeLanguages = new Set(['typescript', 'javascript', 'python', 'rust', 'go', 'java', 'csharp', 'cpp', 'swift', 'kotlin', 'ruby', 'php']);
+  const sorted = [...analyzable].sort((a, b) => {
+    const aIsCode = codeLanguages.has(detectLanguage(a.path)) ? 0 : 1;
+    const bIsCode = codeLanguages.has(detectLanguage(b.path)) ? 0 : 1;
+    if (aIsCode !== bIsCode) return aIsCode - bIsCode;
+    return (b.size || 0) - (a.size || 0);
+  });
+
+  const toFetch = sorted.slice(0, MAX_GITHUB_FILES);
+
+  // Step 4: Fetch file contents (batched parallel requests)
+  const rawFiles = await fetchRepoFiles(parsed.owner, parsed.repo, toFetch, token, onProgress);
+
+  // Set language on each file
+  const files: CodeFile[] = rawFiles
+    .map(f => ({
+      ...f,
+      language: detectLanguage(f.path),
+    }))
+    .filter(f => f.language !== 'unknown' && f.content.length <= MAX_FILE_SIZE);
+
   return { files, metadata };
 }
 
