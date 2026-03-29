@@ -35,10 +35,32 @@ export interface AnalysisResult {
 }
 
 export interface AnalysisProgress {
-  step: 'fetching' | 'parsing' | 'analyzing' | 'synthesizing' | 'complete' | 'error';
+  step: 'fetching' | 'parsing' | 'analyzing' | 'synthesizing' | 'generating_patents' | 'assessing_ip' | 'complete' | 'error';
   progress: number;
   message: string;
   detail?: string;
+}
+
+export interface InnovationCluster {
+  title: string;
+  description: string;
+  featureNames: string[];
+  technicalField: string;
+}
+
+export interface IPOrchestrationProgress {
+  phase: 'clustering' | 'patents' | 'copyrights' | 'trademarks' | 'complete';
+  step: string;
+  overallPercent: number;
+  detail?: string;
+}
+
+export interface IPAnalysisResult {
+  patentApplicationIds: string[];
+  copyrightRegistrationIds: string[];
+  trademarkApplicationIds: string[];
+  clusterCount: number;
+  errors: string[];
 }
 
 export interface Project {

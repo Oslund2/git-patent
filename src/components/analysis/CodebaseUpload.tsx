@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react';
-import { GitFork, Upload, Loader2, FolderArchive, ArrowRight, AlertCircle, X, CheckCircle, Code, Search, Sparkles } from 'lucide-react';
+import { GitFork, Upload, Loader2, FolderArchive, ArrowRight, AlertCircle, X, CheckCircle, Code, Search, Sparkles, FileText, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProject } from '../../contexts/ProjectContext';
 import { ingestFromGitHub, ingestFromZip, getLanguageBreakdown } from '../../services/analysis/codebaseIngestionService';
 import { analyzeCodebase } from '../../services/analysis/codebaseAnalysisEngine';
+import { runFullIPAnalysis } from '../../services/orchestration/ipAutoOrchestrator';
 import { supabase } from '../../lib/supabase';
 import type { AnalysisProgress } from '../../types';
 
@@ -15,6 +16,8 @@ const STEP_CONFIG = [
   { key: 'fetching', label: 'Fetching', icon: Search },
   { key: 'parsing', label: 'Parsing', icon: Code },
   { key: 'analyzing', label: 'Analyzing', icon: Sparkles },
+  { key: 'generating_patents', label: 'Generating IP', icon: FileText },
+  { key: 'assessing_ip', label: 'Filing Prep', icon: Shield },
   { key: 'complete', label: 'Complete', icon: CheckCircle },
 ];
 
@@ -58,7 +61,7 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
 
       // Store file records
       setProgress({ step: 'parsing', progress: 8, message: `Parsing ${files.length} files...` });
-      const languageBreakdown = getLanguageBreakdown(files);
+      getLanguageBreakdown(files); // compute for analysis engine
 
       const fileRows = files.map(f => ({
         project_id: project.id,
@@ -76,9 +79,23 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
       setProgress({ step: 'analyzing', progress: 10, message: 'Starting AI analysis...' });
       await analyzeCodebase(project.id, files, setProgress);
 
+      // Auto-generate all IP applications
+      setProgress({ step: 'generating_patents', progress: 55, message: 'Generating patent applications...' });
+      await runFullIPAnalysis(project.id, user.id, project.name, (ipProgress) => {
+        const basePercent = 55;
+        const pct = basePercent + Math.round(ipProgress.overallPercent * 0.4);
+        const stepKey = ipProgress.phase === 'patents' ? 'generating_patents' : 'assessing_ip';
+        setProgress({
+          step: stepKey as AnalysisProgress['step'],
+          progress: Math.min(pct, 95),
+          message: ipProgress.step,
+          detail: ipProgress.detail,
+        });
+      });
+
       setProgress({
         step: 'complete', progress: 100,
-        message: `Analysis complete! ${files.length} files, ${Object.keys(languageBreakdown).length} languages.`,
+        message: 'IP analysis complete! Patents, copyrights, and trademarks generated.',
       });
       setTimeout(onAnalysisComplete, 1500);
     } catch (err) {
@@ -122,7 +139,21 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
       setProgress({ step: 'analyzing', progress: 10, message: 'Starting AI analysis...' });
       await analyzeCodebase(project.id, files, setProgress);
 
-      setProgress({ step: 'complete', progress: 100, message: 'Analysis complete!' });
+      // Auto-generate all IP applications
+      setProgress({ step: 'generating_patents', progress: 55, message: 'Generating patent applications...' });
+      await runFullIPAnalysis(project.id, user.id, project.name, (ipProgress) => {
+        const basePercent = 55;
+        const pct = basePercent + Math.round(ipProgress.overallPercent * 0.4);
+        const stepKey = ipProgress.phase === 'patents' ? 'generating_patents' : 'assessing_ip';
+        setProgress({
+          step: stepKey as AnalysisProgress['step'],
+          progress: Math.min(pct, 95),
+          message: ipProgress.step,
+          detail: ipProgress.detail,
+        });
+      });
+
+      setProgress({ step: 'complete', progress: 100, message: 'IP analysis complete!' });
       setTimeout(onAnalysisComplete, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analysis failed');

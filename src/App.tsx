@@ -5,18 +5,20 @@ import { ProjectProvider, useProject } from './contexts/ProjectContext';
 import { LoginPage } from './components/auth/LoginPage';
 import { SignUpPage } from './components/auth/SignUpPage';
 import { CodebaseUpload } from './components/analysis/CodebaseUpload';
-import { AnalysisResults } from './components/analysis/AnalysisResults';
 import { ProjectList } from './components/analysis/ProjectList';
+import { IPAnalysisDashboard } from './components/results/IPAnalysisDashboard';
+import { PatentDocumentViewer } from './components/results/PatentDocumentViewer';
 import { IPDashboard } from './components/ip/IPDashboard';
 import type { Project } from './types';
 
-type View = 'projects' | 'upload' | 'results' | 'ip';
+type View = 'projects' | 'upload' | 'ip-results' | 'patent-viewer' | 'advanced';
 
 function AppContent() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { currentProject, selectProject, refreshProjects } = useProject();
   const [view, setView] = useState<View>('projects');
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [viewingPatentId, setViewingPatentId] = useState<string | null>(null);
 
   if (authLoading) {
     return (
@@ -35,12 +37,15 @@ function AppContent() {
 
   const handleSelectProject = (project: Project) => {
     selectProject(project);
-    setView('results');
+    setView('ip-results');
   };
 
   const handleBack = () => {
-    if (view === 'ip') {
-      setView('results');
+    if (view === 'patent-viewer') {
+      setView('ip-results');
+      setViewingPatentId(null);
+    } else if (view === 'advanced') {
+      setView('ip-results');
     } else {
       selectProject(null);
       setView('projects');
@@ -48,7 +53,14 @@ function AppContent() {
     }
   };
 
-  const viewLabel = view === 'ip' ? 'IP Management' : view === 'results' ? 'Analysis' : view === 'upload' ? 'New Project' : null;
+  const viewLabels: Record<View, string | null> = {
+    'projects': null,
+    'upload': 'New Analysis',
+    'ip-results': 'IP Results',
+    'patent-viewer': 'Patent Document',
+    'advanced': 'Advanced Editor',
+  };
+  const viewLabel = viewLabels[view];
   const userInitial = user.email ? user.email[0].toUpperCase() : 'U';
 
   return (
@@ -83,14 +95,17 @@ function AppContent() {
                 <ChevronRight className="w-3.5 h-3.5" />
                 {currentProject && (
                   <>
-                    <span className="flex items-center gap-1.5 text-gray-600 font-medium">
+                    <span
+                      className="flex items-center gap-1.5 text-gray-600 font-medium cursor-pointer hover:text-shield-600"
+                      onClick={() => setView('ip-results')}
+                    >
                       <FolderGit2 className="w-3.5 h-3.5" />
                       {currentProject.name}
                     </span>
-                    {viewLabel && <ChevronRight className="w-3.5 h-3.5" />}
+                    {viewLabel && viewLabel !== 'IP Results' && <ChevronRight className="w-3.5 h-3.5" />}
                   </>
                 )}
-                {viewLabel && (
+                {viewLabel && viewLabel !== 'IP Results' && (
                   <span className="text-gray-500">{viewLabel}</span>
                 )}
               </nav>
@@ -133,13 +148,22 @@ function AppContent() {
           />
         )}
 
-        {view === 'results' && currentProject && (
-          <AnalysisResults
-            onNavigate={() => setView('ip')}
+        {view === 'ip-results' && currentProject && (
+          <IPAnalysisDashboard
+            onAdvancedMode={() => setView('advanced')}
+            onViewPatent={(id) => { setViewingPatentId(id); setView('patent-viewer'); }}
           />
         )}
 
-        {view === 'ip' && currentProject && (
+        {view === 'patent-viewer' && currentProject && viewingPatentId && (
+          <PatentDocumentViewer
+            applicationId={viewingPatentId}
+            onBack={() => { setView('ip-results'); setViewingPatentId(null); }}
+            onAdvancedMode={() => setView('advanced')}
+          />
+        )}
+
+        {view === 'advanced' && currentProject && (
           <IPDashboard />
         )}
       </main>
