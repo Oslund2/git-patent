@@ -85,17 +85,19 @@ export async function generateCompletePatentApplication(
   try {
     const { data: appData } = await (supabase as any)
       .from('patent_applications')
-      .select('invention_description, technical_field, problem_solved, key_features')
+      .select('detailed_description, field_of_invention, metadata')
       .eq('id', config.applicationId)
       .single();
 
-    const hasInventionDescription = appData?.invention_description && appData.invention_description.trim().length > 0;
+    const meta = (appData?.metadata || {}) as Record<string, unknown>;
+    const inventionDesc = appData?.detailed_description || '';
+    const hasInventionDescription = inventionDesc.trim().length > 0;
 
     if (!config.skipPriorArtSearch) {
       updateProgress('Searching for prior art patents...');
       await searchPriorArt(config.projectId, config.applicationId, {
         title: config.title,
-        description: hasInventionDescription ? appData.invention_description : config.description
+        description: hasInventionDescription ? inventionDesc : config.description
       });
       updateProgress('Prior art search completed', 'completed');
     }
@@ -106,13 +108,14 @@ export async function generateCompletePatentApplication(
     if (hasInventionDescription) {
       const inventionInput: InventionInput = {
         title: config.title,
-        description: appData.invention_description,
-        technicalField: appData.technical_field || undefined,
-        problemSolved: appData.problem_solved || undefined,
-        keyFeatures: appData.key_features || undefined
+        description: inventionDesc,
+        technicalField: (appData?.field_of_invention as string) || undefined,
+        problemSolved: (meta.problem_solved as string) || undefined,
+        keyFeatures: (meta.key_features as string[]) || undefined
       };
       features = await extractFeaturesFromInvention(inventionInput);
     } else {
+      // Use features extracted from the codebase analysis
       features = await extractCodebaseFeatures(config.projectId);
     }
     updateProgress('Feature extraction completed', 'completed', { featureCount: features.features.length });

@@ -30,31 +30,11 @@ NOVELTY ASSESSMENT:
 INVENTION CONTEXT:
 \${inventionDescription}
 
-**CROWN JEWEL CLAIM PILLARS** - Focus claims on these 4 technical innovation areas:
+**KEY INNOVATION AREAS** — Focus claims on the core novel features identified in the analyzed codebase:
 
-1. **SELF-DOCUMENTING CODE ANALYSIS**
-   - Parser that traverses abstract syntax trees (AST)
-   - Extraction of function signatures, class hierarchies, data flows
-   - Automated identification of patentable features from source code
-   - Technical transformation: raw code -> structured patent-ready documentation
+\${features}
 
-2. **AI-COMPLIANCE WORKFLOW ORCHESTRATION**
-   - Multi-stage pipeline coordinating LLM calls with validation gates
-   - Prompt templating with variable interpolation and version control
-   - Structured output parsing with JSON schema enforcement
-   - Rate limiting and retry logic with exponential backoff
-
-3. **ASSET DECAY ALGORITHM**
-   - Mathematical formula: decay_multiplier = max(floor_value, decay_rate^(episode_number - 1))
-   - Cost optimization model tracking human editing time reduction over iterations
-   - Configurable parameters for different production scenarios
-   - Comparative analysis engine vs traditional methods
-
-4. **PIPELINE ORCHESTRATION & STATE MACHINE**
-   - Directed acyclic graph (DAG) of dependent generation tasks
-   - Checkpoint/resume capability with persistent state storage
-   - Multi-provider failover with automatic service switching
-   - Progress tracking with granular status updates
+Use the features above as the basis for claim construction. Each independent claim should cover a distinct innovation area. Dependent claims should drill into specific technical implementations of these features.
 
 **ALICE-DEFENSE LANGUAGE REQUIREMENTS** (CRITICAL):
 - Use "processor configured to execute" NOT "computer performs"
@@ -106,24 +86,13 @@ AVAILABLE FEATURES TO COVER:
 **ALICE-DEFENSE STRATEGY FOR DEPENDENT CLAIMS:**
 Each dependent claim should add TECHNICAL SPECIFICITY that anchors the invention to concrete implementation:
 
-1. **Data Structure Claims** - Specify exact structures:
-   - "wherein the cache comprises a least-recently-used (LRU) eviction policy"
-   - "wherein the database schema includes a foreign key relationship between..."
-   - "wherein the JSON schema defines required fields including..."
+1. **Data Structure Claims** - Specify exact structures used in the codebase
+2. **Algorithm Claims** - Include mathematical precision for algorithms identified in the features
+3. **Technical Integration Claims** - Specify protocols, APIs, and services used
+4. **Performance Claims** - Include measurable improvements where identified
 
-2. **Algorithm Claims** - Include mathematical precision:
-   - "wherein calculating the decay multiplier comprises: multiplier = max(floor, rate^(n-1))"
-   - "wherein the retry logic implements exponential backoff with jitter"
-   - "wherein parsing comprises tokenizing using regular expression patterns"
-
-3. **Technical Integration Claims** - Specify protocols/APIs:
-   - "wherein transmitting comprises HTTP POST requests with OAuth 2.0 bearer tokens"
-   - "wherein the storage medium comprises a PostgreSQL database with row-level security"
-   - "wherein the rate limiting implements token bucket algorithm with configurable refill rate"
-
-4. **Performance Claims** - Include measurable improvements:
-   - "wherein the caching reduces API latency by at least 40%"
-   - "wherein the asset decay model reduces human editing time by 15-20% per iteration"
+Base your dependent claims on the ACTUAL FEATURES from the analyzed codebase:
+\${features}
 
 Generate 15-18 dependent claims that:
 1. Reference parent claims properly using "The method of claim X, wherein..." or "The system of claim Y, further comprising..."
