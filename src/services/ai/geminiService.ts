@@ -17,7 +17,7 @@ export interface GenerateTextOptions {
 
 const FEATURE_TOKEN_LIMITS: Record<string, number> = {
   patent_specification: 4096,
-  patent_claims: 4096,
+  patent_claims: 8192,
   patent_prior_art_search: 4096,
   patent_drawings: 2048,
   cpc_classification: 2048,

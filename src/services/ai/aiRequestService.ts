@@ -4,6 +4,7 @@ export interface AIRequestOptions {
   maxRetries?: number;
   retryDelayMs?: number;
   timeoutMs?: number;
+  featureArea?: string;
   onRetry?: (attempt: number, error: Error) => void;
 }
 
@@ -48,7 +49,7 @@ export async function makeAIRequest<T>(
       const timeoutId = setTimeout(() => controller.abort(), opts.timeoutMs);
 
       const response = await Promise.race([
-        geminiGenerateText(prompt),
+        geminiGenerateText(prompt, opts.featureArea),
         new Promise<never>((_, reject) => {
           setTimeout(() => reject(new Error('Request timeout')), opts.timeoutMs);
         })

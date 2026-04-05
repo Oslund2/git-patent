@@ -456,15 +456,21 @@ export async function generateDrawingsForApplication(
 
   try {
     // Fetch features from the analysis results stored for this project
-    const { data: analysisData } = await (supabase as any)
-      .from('analysis_results')
-      .select('features')
+    const { data: featureRows } = await (supabase as any)
+      .from('extracted_features')
+      .select('*')
       .eq('project_id', projectId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+      .order('created_at', { ascending: false });
 
-    const features: ExtractedFeature[] = analysisData?.features || [];
+    const features: ExtractedFeature[] = (featureRows || []).map((row: any) => ({
+      name: row.name || 'Unnamed Feature',
+      type: row.type || 'algorithm',
+      description: row.description || '',
+      technicalDetails: row.technical_details || row.description || '',
+      sourceFile: row.source_files?.[0] || undefined,
+      noveltyStrength: row.novelty_strength || 'moderate',
+      isCoreInnovation: row.is_core_innovation ?? false
+    }));
 
     console.log(`Found ${features.length} features from codebase analysis`);
 
@@ -575,15 +581,21 @@ export async function regenerateSingleDrawing(
       .eq('figure_number', figureNumber);
 
     // Fetch features from analysis results
-    const { data: analysisData } = await (supabase as any)
-      .from('analysis_results')
-      .select('features')
+    const { data: featureRows } = await (supabase as any)
+      .from('extracted_features')
+      .select('*')
       .eq('project_id', projectId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+      .order('created_at', { ascending: false });
 
-    const features: ExtractedFeature[] = analysisData?.features || [];
+    const features: ExtractedFeature[] = (featureRows || []).map((row: any) => ({
+      name: row.name || 'Unnamed Feature',
+      type: row.type || 'algorithm',
+      description: row.description || '',
+      technicalDetails: row.technical_details || row.description || '',
+      sourceFile: row.source_files?.[0] || undefined,
+      noveltyStrength: row.novelty_strength || 'moderate',
+      isCoreInnovation: row.is_core_innovation ?? false
+    }));
 
     if (features.length === 0) {
       return null;

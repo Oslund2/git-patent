@@ -401,6 +401,7 @@ async function generateIndependentClaims(
     {
       maxRetries: 3,
       timeoutMs: 90000,
+      featureArea: 'patent_claims',
       onRetry: (attempt, error) => {
         console.log(`Independent claims generation retry ${attempt}: ${error.message}`);
       }
@@ -477,6 +478,7 @@ async function generateDependentClaims(
     {
       maxRetries: 3,
       timeoutMs: 120000,
+      featureArea: 'patent_claims',
       onRetry: (attempt, error) => {
         console.log(`Dependent claims generation retry ${attempt}: ${error.message}`);
       }
