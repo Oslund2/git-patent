@@ -140,3 +140,26 @@ export async function fetchRepoFiles(
 
   return files;
 }
+
+/**
+ * Fetch README.md content from a GitHub repo.
+ * Tries README.md, readme.md, README, README.rst in order.
+ */
+export async function fetchReadmeContent(
+  owner: string,
+  repo: string,
+  branch: string,
+  token?: string
+): Promise<string | null> {
+  try {
+    const tree = await fetchRepoTree(owner, repo, branch, token);
+    const readmeNames = ['README.md', 'readme.md', 'README', 'README.rst', 'Readme.md'];
+    const readmeEntry = tree.find(entry => readmeNames.includes(entry.path));
+    if (!readmeEntry) return null;
+    const content = await fetchBlobContent(owner, repo, readmeEntry.sha, token);
+    // Truncate to 5000 chars to avoid bloating the DB/prompts
+    return content ? content.substring(0, 5000) : null;
+  } catch {
+    return null;
+  }
+}

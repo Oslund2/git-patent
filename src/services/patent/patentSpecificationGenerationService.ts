@@ -4,12 +4,15 @@ import { supabase } from '../../lib/supabase';
 // Inline prompt builders for patent specification sections
 
 const GROUNDING_RULE = `
-CRITICAL GROUNDING RULE: You MUST only describe functionality that is directly evidenced by the features and code provided above.
-- Do NOT invent components, modules, algorithms, or data structures not listed in the features.
-- Do NOT add reference numerals (e.g., "module 100", "engine 200").
-- Do NOT elaborate beyond what the feature descriptions and code snippets support.
-- If a feature lacks detail, describe it briefly and move on — do NOT fill gaps with speculation.
-- Every technical claim MUST correspond to a named feature from the list above.
+CRITICAL GROUNDING RULES — FOLLOW EXACTLY:
+1. The INVENTION DESCRIPTION above contains the project README. This is the AUTHORITATIVE description of what the software does. Your output MUST be consistent with it.
+2. ONLY describe functionality that exists in the features list above. Each feature was extracted from actual source code.
+3. Do NOT invent components, modules, algorithms, or data structures not listed in the features.
+4. Do NOT add reference numerals (e.g., "module 100", "engine 200").
+5. Do NOT use terms like "blockchain", "differential privacy", "machine learning models" unless they appear in the README or feature descriptions.
+6. If a feature lacks detail, describe it briefly — do NOT fill gaps with speculation or academic-sounding jargon.
+7. Every technical claim MUST correspond to a named feature from the list above.
+8. Write about what the software ACTUALLY DOES, not what a hypothetical system in this domain COULD do.
 `;
 
 /** Format features with full technical details and code snippets for grounding */
@@ -365,13 +368,14 @@ export async function generateIntelligentSpecification(
   projectId?: string | null,
   drawings?: PatentDrawingData[]
 ): Promise<SpecificationSections> {
-  // Load project context (analysis summary, source URL) for grounding
+  // Load project context (analysis summary, source URL, README) for grounding
   let projectContext = '';
+  let readmeContent = '';
   if (projectId) {
     try {
       const { data: project } = await (supabase as any)
         .from('projects')
-        .select('name, source_url, analysis_summary')
+        .select('name, source_url, analysis_summary, source_metadata')
         .eq('id', projectId)
         .maybeSingle();
       if (project) {
@@ -380,14 +384,27 @@ export async function generateIntelligentSpecification(
         if (project.source_url) parts.push(`Source: ${project.source_url}`);
         if (project.analysis_summary) parts.push(`Analysis Summary: ${project.analysis_summary}`);
         projectContext = parts.join('\n');
+        // Extract README from source_metadata
+        const meta = project.source_metadata as Record<string, any> | null;
+        if (meta?.readmeContent) {
+          readmeContent = meta.readmeContent;
+        }
       }
     } catch { /* continue without project context */ }
   }
 
-  // Enrich invention context with project info
+  // Build comprehensive grounding context with README
+  const groundingParts: string[] = [];
+  if (projectContext) groundingParts.push(projectContext);
+  if (readmeContent) {
+    groundingParts.push(`\n--- PROJECT README (this is the authoritative description of what the software does) ---\n${readmeContent}\n--- END README ---`);
+  }
+  if (inventionContext?.description) groundingParts.push(inventionContext.description);
+
+  // Enrich invention context with project info + README
   const enrichedContext: InventionContext = {
     ...inventionContext,
-    description: [inventionContext?.description, projectContext].filter(Boolean).join('\n\n')
+    description: groundingParts.join('\n\n')
   };
 
   const referenceContext = drawings && drawings.length > 0

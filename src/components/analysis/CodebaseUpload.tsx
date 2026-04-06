@@ -48,13 +48,16 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
       const githubToken = session?.provider_token || undefined;
 
       setProgress({ step: 'fetching', progress: 2, message: 'Fetching repository tree...' });
-      const { files, metadata } = await ingestFromGitHub(repoUrl.trim(), githubToken, (fetched, total) => {
+      const { files, metadata, readmeContent } = await ingestFromGitHub(repoUrl.trim(), githubToken, (fetched, total) => {
         const pct = 2 + Math.round((fetched / total) * 6);
         setProgress({ step: 'fetching', progress: pct, message: `Fetching files... ${fetched}/${total}` });
       });
 
       await updateProject(project.id, {
-        source_metadata: metadata as unknown as Record<string, unknown>,
+        source_metadata: {
+          ...(metadata as unknown as Record<string, unknown>),
+          readmeContent: readmeContent || undefined,
+        },
       });
 
       // Store file records

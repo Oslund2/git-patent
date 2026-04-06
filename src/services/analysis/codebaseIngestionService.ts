@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import type { CodeFile } from '../../types';
-import { fetchRepoMetadata, fetchRepoTree, fetchRepoFiles, parseGitHubUrl } from './githubService';
+import { fetchRepoMetadata, fetchRepoTree, fetchRepoFiles, parseGitHubUrl, fetchReadmeContent } from './githubService';
 
 const MAX_FILE_SIZE = 100 * 1024; // 100KB per file
 const MAX_FILES = 500;
@@ -125,7 +125,7 @@ export async function ingestFromGitHub(
   repoUrl: string,
   token?: string,
   onProgress?: (fetched: number, total: number) => void,
-): Promise<{ files: CodeFile[]; metadata: Awaited<ReturnType<typeof fetchRepoMetadata>> }> {
+): Promise<{ files: CodeFile[]; metadata: Awaited<ReturnType<typeof fetchRepoMetadata>>; readmeContent: string | null }> {
   const parsed = parseGitHubUrl(repoUrl);
   if (!parsed) throw new Error('Invalid GitHub URL');
 
@@ -166,7 +166,13 @@ export async function ingestFromGitHub(
     }))
     .filter(f => f.language !== 'unknown' && f.content.length <= MAX_FILE_SIZE);
 
-  return { files, metadata };
+  // Also fetch README for context in patent generation
+  let readmeContent: string | null = null;
+  try {
+    readmeContent = await fetchReadmeContent(parsed.owner, parsed.repo, metadata.defaultBranch, token);
+  } catch { /* README is optional */ }
+
+  return { files, metadata, readmeContent };
 }
 
 export function getLanguageBreakdown(files: CodeFile[]): Record<string, number> {
