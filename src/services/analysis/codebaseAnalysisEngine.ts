@@ -122,7 +122,7 @@ export async function analyzeCodebase(
       step: 'analyzing',
       progress: progressPct,
       message: `Analyzing batch ${i + 1} of ${batches.length}...`,
-      detail: batch.map(f => f.path).join(', '),
+      detail: `Scanning ${batch.length} files for patentable innovations (${[...new Set(batch.map(f => f.language))].join(', ')})`,
     });
 
     try {
