@@ -50,15 +50,9 @@ export function ProjectList({ onSelectProject, onNewProject }: ProjectListProps)
             <FolderGit2 className="w-10 h-10 text-gray-300" />
           </div>
           <h3 className="text-xl font-semibold text-gray-700 mb-3">No projects yet</h3>
-          <p className="text-base text-gray-500 mb-8 max-w-sm mx-auto">
-            Upload a codebase to discover patentable innovations, copyrightable works, and trademarks
+          <p className="text-base text-gray-500 max-w-sm mx-auto">
+            Connect a GitHub repository to discover patentable innovations, copyrightable works, and trademarks
           </p>
-          <button
-            onClick={onNewProject}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-shield-600 to-indigo-600 text-white px-8 py-3.5 rounded-xl hover:shadow-lg hover:shadow-shield-600/25 transition-all font-semibold text-base"
-          >
-            <Plus className="w-5 h-5" /> Get Started
-          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

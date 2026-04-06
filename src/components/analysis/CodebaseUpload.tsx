@@ -173,106 +173,45 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
           Analyze Your Codebase
         </h2>
         <p className="text-base text-gray-500 mt-3 max-w-lg mx-auto">
-          Point to a GitHub repository or upload a zip file to discover patentable intellectual property
+          Point to a GitHub repository to discover patentable intellectual property
         </p>
       </div>
 
-      {/* Two cards side by side */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* GitHub Card */}
-        <div
-          onClick={() => setMode('github')}
-          className={`bg-white border-2 rounded-2xl p-8 cursor-pointer transition-all ${
-            mode === 'github'
-              ? 'border-shield-500 shadow-md shadow-shield-500/10'
-              : 'border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200'
-          }`}
-        >
-          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 transition-colors ${
-            mode === 'github' ? 'bg-gradient-to-br from-shield-500 to-indigo-500' : 'bg-gray-100'
-          }`}>
-            <GitFork className={`w-7 h-7 ${mode === 'github' ? 'text-white' : 'text-gray-500'}`} />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">GitHub Repository</h3>
-          <p className="text-sm text-gray-500 mb-6">
-            Paste a public or private repo URL and we will fetch and analyze it automatically.
-          </p>
-
-          {mode === 'github' && (
-            <div className="space-y-4">
-              <div className="relative">
-                <GitFork className="absolute left-4 top-4 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={repoUrl}
-                  onChange={(e) => setRepoUrl(e.target.value)}
-                  placeholder="https://github.com/owner/repo"
-                  className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-shield-500 focus:border-transparent focus:bg-white text-gray-900 text-base transition-colors"
-                  disabled={loading}
-                  onKeyDown={(e) => e.key === 'Enter' && handleGitHubAnalysis()}
-                />
-              </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); handleGitHubAnalysis(); }}
-                disabled={loading || !repoUrl.trim()}
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-shield-600 to-indigo-600 text-white font-semibold py-3.5 px-4 rounded-xl hover:shadow-lg hover:shadow-shield-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base"
-              >
-                {loading && mode === 'github' ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
-                {loading && mode === 'github' ? 'Analyzing...' : 'Analyze Repository'}
-              </button>
+      {/* GitHub input */}
+      <div className="max-w-2xl mx-auto mb-8">
+        <div className="bg-white border-2 border-shield-500 rounded-2xl p-8 shadow-md shadow-shield-500/10">
+          <div className="flex items-center gap-4 mb-5">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-shield-500 to-indigo-500">
+              <GitFork className="w-7 h-7 text-white" />
             </div>
-          )}
-        </div>
-
-        {/* Zip Card */}
-        <div
-          onClick={() => setMode('zip')}
-          className={`bg-white border-2 rounded-2xl p-8 cursor-pointer transition-all ${
-            mode === 'zip'
-              ? 'border-violet-500 shadow-md shadow-violet-500/10'
-              : 'border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200'
-          }`}
-        >
-          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 transition-colors ${
-            mode === 'zip' ? 'bg-gradient-to-br from-violet-500 to-purple-500' : 'bg-gray-100'
-          }`}>
-            <FolderArchive className={`w-7 h-7 ${mode === 'zip' ? 'text-white' : 'text-gray-500'}`} />
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">GitHub Repository</h3>
+              <p className="text-sm text-gray-500">Paste a public or private repo URL to analyze</p>
+            </div>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Upload Zip File</h3>
-          <p className="text-sm text-gray-500 mb-6">
-            Drag and drop or browse for a zip archive of your codebase. Max 50MB.
-          </p>
 
-          {mode === 'zip' && (
-            <div
-              onClick={(e) => { e.stopPropagation(); if (!loading) fileInputRef.current?.click(); }}
-              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-                loading
-                  ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
-                  : 'border-violet-300 hover:border-violet-400 hover:bg-violet-50/50 bg-violet-50/30'
-              }`}
-            >
+          <div className="space-y-4">
+            <div className="relative">
+              <GitFork className="absolute left-4 top-4 w-5 h-5 text-gray-400" />
               <input
-                ref={fileInputRef}
-                type="file"
-                accept=".zip"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleZipUpload(file);
-                }}
+                type="text"
+                value={repoUrl}
+                onChange={(e) => setRepoUrl(e.target.value)}
+                placeholder="https://github.com/owner/repo"
+                className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-shield-500 focus:border-transparent focus:bg-white text-gray-900 text-base transition-colors"
+                disabled={loading}
+                onKeyDown={(e) => e.key === 'Enter' && handleGitHubAnalysis()}
               />
-              {loading && mode === 'zip' ? (
-                <Loader2 className="w-10 h-10 text-violet-500 mx-auto animate-spin" />
-              ) : (
-                <Upload className="w-10 h-10 text-violet-400 mx-auto" />
-              )}
-              <p className="mt-3 text-gray-600 font-medium text-base">
-                {loading && mode === 'zip' ? 'Processing...' : 'Drop file here or click to browse'}
-              </p>
-              <p className="mt-1 text-gray-400 text-sm">ZIP files up to 50MB</p>
             </div>
-          )}
+            <button
+              onClick={handleGitHubAnalysis}
+              disabled={loading || !repoUrl.trim()}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-shield-600 to-indigo-600 text-white font-semibold py-3.5 px-4 rounded-xl hover:shadow-lg hover:shadow-shield-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base"
+            >
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
+              {loading ? 'Analyzing...' : 'Analyze Repository'}
+            </button>
+          </div>
         </div>
       </div>
 
