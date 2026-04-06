@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProject } from '../../contexts/ProjectContext';
+import { supabase } from '../../lib/supabase';
 import {
   getPatentApplications,
   getPatentApplication,
@@ -297,6 +298,70 @@ export function PatentApplication() {
   const [createDescription, setCreateDescription] = useState('');
   const [createTechnicalField, setCreateTechnicalField] = useState('');
   const [createProblemSolved, setCreateProblemSolved] = useState('');
+  const [prefilling, setPrefilling] = useState(false);
+
+  const openCreateModalWithPrefill = async () => {
+    setShowCreateModal(true);
+    if (!projectId) return;
+    setPrefilling(true);
+    try {
+      // Fetch project info + README
+      const { data: project } = await (supabase as any)
+        .from('projects')
+        .select('name, source_url, analysis_summary, source_metadata')
+        .eq('id', projectId)
+        .maybeSingle();
+
+      // Fetch extracted features
+      const { data: features } = await (supabase as any)
+        .from('extracted_features')
+        .select('name, type, description, technical_details, novelty_strength, is_core_innovation')
+        .eq('project_id', projectId)
+        .order('is_core_innovation', { ascending: false });
+
+      const readme = (project?.source_metadata as any)?.readmeContent || '';
+      const featureList = (features || []).slice(0, 15);
+      const projectName = project?.name || '';
+
+      // Build a prompt to generate patent application metadata
+      const prompt = `Based on the following codebase analysis, suggest a patent application title and description.
+
+PROJECT: ${projectName}
+${project?.source_url ? `URL: ${project.source_url}` : ''}
+${project?.analysis_summary ? `ANALYSIS: ${project.analysis_summary}` : ''}
+
+${readme ? `README:\n${readme.substring(0, 3000)}\n` : ''}
+
+KEY FEATURES (from code analysis):
+${featureList.map((f: any) => `- ${f.name} (${f.type}): ${f.description || ''}`).join('\n')}
+
+Respond in JSON with these fields:
+{
+  "title": "A patent-style title describing the core innovation (e.g., 'System and Method for...')",
+  "description": "2-3 sentence description of what the software does and its key innovations, based on the README and features above",
+  "technicalField": "The technical field (e.g., 'Content Management Systems', 'Geographic Information Systems')",
+  "problemSolved": "1 sentence describing the problem this software solves"
+}
+
+Base your response ONLY on the README and features provided. Do NOT invent capabilities not described above.
+Respond with ONLY the JSON object.`;
+
+      const { generateText } = await import('../../services/ai/geminiService');
+      const response = await generateText(prompt, 'default');
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.title) setCreateTitle(parsed.title);
+        if (parsed.description) setCreateDescription(parsed.description);
+        if (parsed.technicalField) setCreateTechnicalField(parsed.technicalField);
+        if (parsed.problemSolved) setCreateProblemSolved(parsed.problemSolved);
+      }
+    } catch (err) {
+      console.error('Failed to prefill patent form:', err);
+    } finally {
+      setPrefilling(false);
+    }
+  };
 
   const convertSvgToPng = (svgContent: string, width: number = 800, height: number = 600): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -818,7 +883,7 @@ export function PatentApplication() {
           <p className="text-gray-500 text-sm mt-1.5 ml-[52px]">Manage and generate patent documentation</p>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={openCreateModalWithPrefill}
           className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md shadow-blue-200 hover:shadow-lg hover:shadow-blue-200"
         >
           <Plus className="w-4 h-4" />
@@ -857,7 +922,7 @@ export function PatentApplication() {
                   </div>
                   <p className="text-gray-500 text-sm">No applications yet</p>
                   <button
-                    onClick={() => setShowCreateModal(true)}
+                    onClick={openCreateModalWithPrefill}
                     className="mt-3 text-blue-600 hover:text-blue-700 text-sm font-semibold transition-colors"
                   >
                     Create your first application
@@ -1083,7 +1148,7 @@ export function PatentApplication() {
               <h3 className="text-lg font-semibold text-gray-800 mb-2">No Application Selected</h3>
               <p className="text-gray-500 text-sm mb-8 max-w-sm mx-auto">Select an application from the list or create a new one to get started.</p>
               <button
-                onClick={() => setShowCreateModal(true)}
+                onClick={openCreateModalWithPrefill}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md shadow-blue-200"
               >
                 <Plus className="w-4 h-4" />
@@ -1101,7 +1166,11 @@ export function PatentApplication() {
             <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">New Patent Application</h3>
-                <p className="text-sm text-gray-500 mt-0.5">Fill in the details to get started</p>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {prefilling ? (
+                    <span className="inline-flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> AI is pre-filling from your codebase analysis...</span>
+                  ) : 'Review and edit the AI-suggested details below'}
+                </p>
               </div>
               <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600 transition-colors p-1.5 hover:bg-gray-100 rounded-lg">
                 <X className="w-5 h-5" />
