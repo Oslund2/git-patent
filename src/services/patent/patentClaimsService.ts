@@ -9,49 +9,6 @@ import {
   parseJSONArray,
 } from '../ai/aiRequestService';
 
-export interface ClaimTemplate {
-  category: PatentClaim['category'];
-  type: PatentClaim['claim_type'];
-  parentRef?: number;
-  template: string;
-  description: string;
-}
-
-// No hardcoded claim templates — all claims are generated fresh by AI from the actual invention.
-const INDEPENDENT_METHOD_CLAIMS: ClaimTemplate[] = [];
-const DEPENDENT_CLAIMS: ClaimTemplate[] = [];
-
-export function generateDefaultClaims(): ClaimTemplate[] {
-  return [...INDEPENDENT_METHOD_CLAIMS, ...DEPENDENT_CLAIMS];
-}
-
-export async function generateClaimsForApplication(applicationId: string): Promise<PatentClaim[]> {
-  const templates = generateDefaultClaims();
-  const claims: PatentClaim[] = [];
-
-  for (let i = 0; i < templates.length; i++) {
-    const template = templates[i];
-    const claimNumber = i + 1;
-
-    let parentClaimId: string | null = null;
-    if (template.parentRef && claims.length >= template.parentRef) {
-      parentClaimId = claims[template.parentRef - 1].id;
-    }
-
-    const claim = await createPatentClaim(applicationId, {
-      claim_number: claimNumber,
-      claim_type: template.type,
-      parent_claim_id: parentClaimId,
-      claim_text: template.template,
-      status: 'draft',
-      category: template.category
-    });
-
-    claims.push(claim);
-  }
-
-  return claims;
-}
 
 export function formatClaimForDisplay(claim: PatentClaim): string {
   return `${claim.claim_number}. ${claim.claim_text}`;

@@ -33,7 +33,8 @@ import {
   type PatentApplication as PatentApplicationType,
   type PatentApplicationWithDetails,
 } from '../../services/patent/patentApplicationService';
-import { generateClaimsForApplication } from '../../services/patent/patentClaimsService';
+import { generateAIEnhancedClaims } from '../../services/patent/patentClaimsService';
+import { extractCodebaseFeatures } from '../../services/patent/patentFeatureExtractionService';
 import { generateDrawingsForApplication, regenerateSingleDrawing, svgToDataUrl } from '../../services/patent/patentDrawingsService';
 import {
   createUsptoCompliantPdf,
@@ -309,10 +310,21 @@ Respond with ONLY the JSON object.`;
   };
 
   const handleGenerateClaims = async () => {
-    if (!selectedApp) return;
+    if (!selectedApp || !projectId || !user) return;
     setGenerating(true);
+    setError(null);
     try {
-      const claims = await generateClaimsForApplication(selectedApp.id);
+      // Extract features and novelty for AI claim generation
+      const featuresResult = await extractCodebaseFeatures(projectId);
+      const noveltyAnalysis = await performNoveltyAnalysis(projectId, selectedApp.id, user.id);
+      const claims = await generateAIEnhancedClaims(
+        selectedApp.id,
+        featuresResult.features,
+        noveltyAnalysis,
+        projectId,
+        selectedApp.title,
+        selectedApp.detailed_description || selectedApp.invention_description || ''
+      );
       setSelectedApp({ ...selectedApp, claims });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate claims');

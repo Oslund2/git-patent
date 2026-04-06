@@ -219,7 +219,10 @@ export async function generateCompletePatentApplication(
       const claims = await generateAIEnhancedClaims(
         config.applicationId,
         features.features,
-        noveltyAnalysis
+        noveltyAnalysis,
+        config.projectId,
+        config.title,
+        inventionDesc
       );
       updateProgress('Claims generation completed', 'completed', { claimsCount: claims.length });
     }
