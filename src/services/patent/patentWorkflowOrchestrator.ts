@@ -90,7 +90,26 @@ export async function generateCompletePatentApplication(
       .single();
 
     const meta = (appData?.metadata || {}) as Record<string, unknown>;
-    const inventionDesc = appData?.detailed_description || '';
+    let inventionDesc = appData?.detailed_description || '';
+
+    // If no README in invention description, try loading from project
+    if (!inventionDesc.includes('README')) {
+      try {
+        const { data: projectData } = await (supabase as any)
+          .from('projects')
+          .select('source_metadata, analysis_summary')
+          .eq('id', config.projectId)
+          .maybeSingle();
+        const readme = (projectData?.source_metadata as any)?.readmeContent;
+        if (readme) {
+          inventionDesc = `${inventionDesc}\n\n--- PROJECT README (authoritative description) ---\n${readme}\n--- END README ---`;
+        }
+        if (projectData?.analysis_summary && !inventionDesc.includes(projectData.analysis_summary)) {
+          inventionDesc = `${inventionDesc}\n\nAnalysis Summary: ${projectData.analysis_summary}`;
+        }
+      } catch { /* continue without project data */ }
+    }
+
     const hasInventionDescription = inventionDesc.trim().length > 0;
 
     if (!config.skipPriorArtSearch) {

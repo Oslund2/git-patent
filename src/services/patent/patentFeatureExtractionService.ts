@@ -46,16 +46,38 @@ export async function extractCodebaseFeatures(
     console.error('Failed to load extracted features:', error);
   }
 
-  const features: ExtractedFeature[] = (rows || []).map((row: any) => ({
-    name: row.name || row.feature_name || 'Unnamed Feature',
-    type: row.type || row.feature_type || 'algorithm',
-    description: row.description || '',
-    technicalDetails: row.technical_details || row.description || '',
-    sourceFile: row.source_file || row.source_file_path || undefined,
-    codeSnippet: row.code_snippet || undefined,
-    noveltyStrength: row.novelty_strength || 'moderate',
-    isCoreInnovation: row.is_core_innovation ?? true
-  }));
+  const features: ExtractedFeature[] = (rows || []).map((row: any) => {
+    // Extract code snippet from code_snippets JSONB column
+    let snippet: string | undefined;
+    if (row.code_snippets) {
+      try {
+        const snippets = typeof row.code_snippets === 'string'
+          ? JSON.parse(row.code_snippets)
+          : row.code_snippets;
+        if (Array.isArray(snippets) && snippets.length > 0) {
+          snippet = snippets.map((s: any) => s.snippet || s).join('\n').substring(0, 500);
+        } else if (typeof snippets === 'string') {
+          snippet = snippets.substring(0, 500);
+        }
+      } catch { /* ignore parse errors */ }
+    }
+
+    // Extract source files from source_files array column
+    const sourceFile = Array.isArray(row.source_files) && row.source_files.length > 0
+      ? row.source_files[0]
+      : (row.source_file || row.source_file_path || undefined);
+
+    return {
+      name: row.name || row.feature_name || 'Unnamed Feature',
+      type: row.type || row.feature_type || 'algorithm',
+      description: row.description || '',
+      technicalDetails: row.technical_details || row.description || '',
+      sourceFile,
+      codeSnippet: snippet,
+      noveltyStrength: row.novelty_strength || 'moderate',
+      isCoreInnovation: row.is_core_innovation ?? true
+    };
+  });
 
   const serviceFiles = [...new Set(features.map(f => f.sourceFile).filter(Boolean))] as string[];
 

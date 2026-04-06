@@ -340,6 +340,21 @@ export async function runFullIPAnalysis(
   }
 
   // -----------------------------------------------------------------------
+  // 1b. Load project README for grounding patent generation
+  // -----------------------------------------------------------------------
+  let readmeContent = '';
+  try {
+    const { data: projectData } = await (supabase as any)
+      .from('projects')
+      .select('source_metadata, analysis_summary')
+      .eq('id', projectId)
+      .maybeSingle();
+    if (projectData?.source_metadata?.readmeContent) {
+      readmeContent = projectData.source_metadata.readmeContent;
+    }
+  } catch { /* continue without README */ }
+
+  // -----------------------------------------------------------------------
   // 2. Generate patents (10-70%)
   // -----------------------------------------------------------------------
   try {
@@ -350,6 +365,11 @@ export async function runFullIPAnalysis(
       const cluster = clusters[i];
       const basePercent = 10 + i * perPatent;
 
+      // Build rich invention description with README for grounding
+      const inventionDesc = readmeContent
+        ? `${cluster.description}\n\n--- PROJECT README (authoritative description of what the software does) ---\n${readmeContent}\n--- END README ---`
+        : cluster.description;
+
       try {
         reportProgress(
           onProgress,
@@ -359,10 +379,10 @@ export async function runFullIPAnalysis(
           cluster.description
         );
 
-        // Create the patent application
+        // Create the patent application with README-enriched description
         const app = await createPatentApplication(projectId, userId, {
           title: cluster.title,
-          inventionDescription: cluster.description,
+          inventionDescription: inventionDesc,
           technicalField: cluster.technicalField,
         });
 
@@ -379,7 +399,7 @@ export async function runFullIPAnalysis(
           projectId,
           userId,
           title: cluster.title,
-          description: cluster.description,
+          description: inventionDesc,
           skipPriorArtSearch: false,
           useAIClaims: true,
         });
