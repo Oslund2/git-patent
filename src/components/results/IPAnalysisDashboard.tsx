@@ -161,16 +161,24 @@ export function IPAnalysisDashboard({ onAdvancedMode, onViewPatent }: IPAnalysis
             <div className="w-16 h-16 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20">
               <Sparkles className="w-8 h-8" />
             </div>
-            <h2 className="text-2xl font-bold">IP Generation In Progress</h2>
+            <h2 className="text-2xl font-bold">No IP Applications Yet</h2>
             <p className="text-blue-100 text-center max-w-md">
-              Your patent applications, copyrights, and trademarks are being generated. This may take a moment.
+              Your codebase has been analyzed. Use the Advanced Editor to create patent applications, copyrights, and trademarks.
             </p>
-            <button
-              onClick={loadAll}
-              className="mt-2 px-5 py-2.5 bg-white/15 backdrop-blur-sm border border-white/25 rounded-xl text-sm font-semibold hover:bg-white/25 transition-all"
-            >
-              Refresh
-            </button>
+            <div className="flex items-center gap-3 mt-2">
+              <button
+                onClick={onAdvancedMode}
+                className="px-6 py-2.5 bg-white text-shield-600 rounded-xl text-sm font-semibold hover:shadow-lg transition-all"
+              >
+                Open Advanced Editor
+              </button>
+              <button
+                onClick={loadAll}
+                className="px-5 py-2.5 bg-white/15 backdrop-blur-sm border border-white/25 rounded-xl text-sm font-semibold hover:bg-white/25 transition-all"
+              >
+                Refresh
+              </button>
+            </div>
           </div>
         </div>
       </div>
