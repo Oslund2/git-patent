@@ -122,7 +122,8 @@ async function assessCopyrights(
   projectId: string,
   userId: string,
   projectName: string,
-  features: ExtractedFeature[]
+  features: ExtractedFeature[],
+  applicantInfo?: ApplicantInfo
 ): Promise<string[]> {
   const featureSummary = features
     .slice(0, 10)
@@ -216,7 +217,8 @@ async function detectTrademarks(
   projectId: string,
   userId: string,
   projectName: string,
-  features: ExtractedFeature[]
+  features: ExtractedFeature[],
+  applicantInfo?: ApplicantInfo
 ): Promise<string[]> {
   const featureNames = features
     .slice(0, 8)
@@ -468,7 +470,7 @@ export async function runFullIPAnalysis(
   try {
     reportProgress(onProgress, 'copyrights', 'Identifying copyrightable works...', 70);
 
-    const copyrightIds = await assessCopyrights(projectId, userId, projectName, features);
+    const copyrightIds = await assessCopyrights(projectId, userId, projectName, features, applicantInfo);
     result.copyrightRegistrationIds = copyrightIds;
 
     reportProgress(
@@ -490,7 +492,7 @@ export async function runFullIPAnalysis(
   try {
     reportProgress(onProgress, 'trademarks', 'Analyzing trademarkable names...', 85);
 
-    const trademarkIds = await detectTrademarks(projectId, userId, projectName, features);
+    const trademarkIds = await detectTrademarks(projectId, userId, projectName, features, applicantInfo);
     result.trademarkApplicationIds = trademarkIds;
 
     reportProgress(

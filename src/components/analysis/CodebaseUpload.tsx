@@ -9,7 +9,7 @@ import { supabase } from '../../lib/supabase';
 import type { AnalysisProgress } from '../../types';
 
 interface CodebaseUploadProps {
-  onAnalysisComplete: (project: { id: string; name: string; source_type: string; source_url: string; [key: string]: any }) => void;
+  onAnalysisComplete: (project: any) => void;
 }
 
 const STEP_CONFIG = [

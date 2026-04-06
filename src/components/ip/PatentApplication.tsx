@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Shield,
   FileText,
@@ -14,7 +14,6 @@ import {
   BarChart3,
   ClipboardCheck,
   Trash2,
-  Search,
   Users
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
