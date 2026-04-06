@@ -161,13 +161,34 @@ async function generateIndependentClaims(
   const result = await makeAIRequest<string[]>(
     prompt,
     (response) => {
-      const rawClaims = parseJSONArray<any>(response);
-      // The prompt returns objects like {number, type, text, noveltyBasis} — extract the text
-      const claims = rawClaims.map((c: any) => {
-        if (typeof c === 'string') return c;
-        if (typeof c === 'object' && c !== null) return c.text || c.claim_text || c.claimText || '';
-        return '';
-      }).filter((c: string) => typeof c === 'string' && c.length > 50);
+      let claims: string[] = [];
+
+      // Try parsing as a JSON object with a "claims" key first
+      try {
+        const objMatch = response.match(/\{[\s\S]*\}/);
+        if (objMatch) {
+          const obj = JSON.parse(objMatch[0]);
+          if (obj.claims && Array.isArray(obj.claims)) {
+            claims = obj.claims.map((c: any) => {
+              if (typeof c === 'string') return c;
+              if (typeof c === 'object' && c !== null) return c.text || c.claim_text || c.claimText || '';
+              return '';
+            });
+          }
+        }
+      } catch { /* fall through to array parsing */ }
+
+      // If no claims from object parsing, try as a flat JSON array
+      if (claims.length === 0) {
+        const rawClaims = parseJSONArray<any>(response);
+        claims = rawClaims.map((c: any) => {
+          if (typeof c === 'string') return c;
+          if (typeof c === 'object' && c !== null) return c.text || c.claim_text || c.claimText || '';
+          return '';
+        });
+      }
+
+      claims = claims.filter((c: string) => typeof c === 'string' && c.length > 50);
       if (claims.length < 2) {
         console.warn(`AI generated only ${claims.length} independent claims, expected 2-4`);
       }

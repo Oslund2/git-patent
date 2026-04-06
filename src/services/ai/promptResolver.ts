@@ -99,17 +99,12 @@ Each claim should:
 - Reference concrete data transformations, not abstract ideas
 - Be broad enough to be commercially valuable but specific enough to be novel
 
-Respond in JSON format:
-{
-  "claims": [
-    {
-      "number": 1,
-      "type": "method",
-      "text": "A method for...",
-      "noveltyBasis": "Brief explanation of what makes this claim novel"
-    }
-  ]
-}`,
+Respond with ONLY a JSON array of claim text strings. No wrapper object, no extra fields — just the claim text:
+[
+  "1. A method for ... comprising: ...",
+  "2. A system for ... comprising: ...",
+  "3. A non-transitory computer-readable medium storing instructions that, when executed, cause a processor to ..."
+]`,
 
   patent_claims_dependent: `Generate dependent patent claims that add specific limitations to the following independent claims.
 
@@ -130,17 +125,11 @@ Generate 8-15 dependent claims that:
 3. Cover different aspects of the invention
 4. Create a claim tree with varying scope
 
-Respond in JSON format:
-{
-  "claims": [
-    {
-      "number": 4,
-      "dependsOn": 1,
-      "text": "The method of claim 1, wherein...",
-      "limitation": "Brief description of what limitation this adds"
-    }
-  ]
-}`,
+Respond with ONLY a JSON array of objects. No wrapper object:
+[
+  {"claimText": "The method of claim 1, wherein ...", "parentClaimNumber": 1},
+  {"claimText": "The system of claim 2, further comprising ...", "parentClaimNumber": 2}
+]`,
 
   patent_field_of_invention: `Write a "Field of the Invention" section for a patent application.
 
