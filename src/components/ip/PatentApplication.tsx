@@ -59,6 +59,7 @@ import {
   type AliceRiskAssessment,
 } from '../../services/patent/patentNoveltyAnalysisService';
 import { generateCoverSheetHTML } from '../../services/patent/coverSheetService';
+import { generateUsptoApplicationPdf } from '../../services/patent/usptoApplicationPdfService';
 import { PatentOverviewTab } from './patent/PatentOverviewTab';
 import { PatentApplicantTab } from './patent/PatentApplicantTab';
 import { PatentSpecificationTab } from './patent/PatentSpecificationTab';
@@ -96,6 +97,7 @@ export function PatentApplication() {
   const [exporting, setExporting] = useState(false);
   const [exportingSection, setExportingSection] = useState<string | null>(null);
   const [exportOptions, setExportOptions] = useState({ includeExemplaryClaims: false });
+  const [exportingUspto, setExportingUspto] = useState(false);
 
   // Prior Art tab state
   const [priorArtResults, setPriorArtResults] = useState<any[]>([]);
@@ -604,6 +606,33 @@ Respond with ONLY the JSON object.`;
     }
   };
 
+  const handleExportUSPTOPdf = async () => {
+    if (!selectedApp) return;
+    setExportingUspto(true);
+    try {
+      const drawingsWithImages: Map<number, string> = new Map();
+      if (selectedApp.drawings.length > 0) {
+        for (const drawing of selectedApp.drawings) {
+          if (drawing.svg_content) {
+            try {
+              const pngDataUrl = await convertSvgToPng(drawing.svg_content, 800, 600);
+              drawingsWithImages.set(drawing.figure_number, pngDataUrl);
+            } catch { /* skip failed drawings */ }
+          }
+        }
+      }
+
+      const pdf = generateUsptoApplicationPdf(selectedApp, drawingsWithImages, {
+        includeExemplaryClaims: exportOptions.includeExemplaryClaims
+      });
+      pdf.save(`${selectedApp.title.replace(/\s+/g, '_')}_USPTO_Application.pdf`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export USPTO PDF');
+    } finally {
+      setExportingUspto(false);
+    }
+  };
+
   const handleExportSectionPDF = async (section: string) => {
     if (!selectedApp) return;
     setExportingSection(section);
@@ -940,8 +969,10 @@ Respond with ONLY the JSON object.`;
                   <PatentExportTab
                     application={selectedApp}
                     onExportPDF={handleExportPDF}
+                    onExportUSPTOPdf={handleExportUSPTOPdf}
                     onExportSectionPDF={handleExportSectionPDF}
                     exporting={exporting}
+                    exportingUspto={exportingUspto}
                     exportingSection={exportingSection}
                     exportOptions={exportOptions}
                     onExportOptionsChange={setExportOptions}

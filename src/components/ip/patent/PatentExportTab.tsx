@@ -11,7 +11,8 @@ import {
   Scroll,
   BarChart3,
   Printer,
-  Copy
+  Copy,
+  FileCheck
 } from 'lucide-react';
 import { countWords, type PatentApplicationWithDetails } from '../../../services/patent/patentApplicationService';
 import { formatDrawingsDescriptionSection } from '../../../services/patent/patentDrawingsService';
@@ -19,14 +20,16 @@ import { formatDrawingsDescriptionSection } from '../../../services/patent/paten
 interface PatentExportTabProps {
   application: PatentApplicationWithDetails;
   onExportPDF: () => void;
+  onExportUSPTOPdf: () => void;
   onExportSectionPDF: (section: string) => void;
   exporting: boolean;
+  exportingUspto: boolean;
   exportingSection: string | null;
   exportOptions: { includeExemplaryClaims: boolean };
   onExportOptionsChange: (options: { includeExemplaryClaims: boolean }) => void;
 }
 
-export function PatentExportTab({ application, onExportPDF, onExportSectionPDF, exporting, exportingSection, exportOptions, onExportOptionsChange }: PatentExportTabProps) {
+export function PatentExportTab({ application, onExportPDF, onExportUSPTOPdf, onExportSectionPDF, exporting, exportingUspto, exportingSection, exportOptions, onExportOptionsChange }: PatentExportTabProps) {
   const sectionExports = [
     { id: 'overview', label: 'Overview', icon: Shield, description: 'Application details', hasContent: true },
     { id: 'specification', label: 'Specification', icon: FileText, description: 'Technical description', hasContent: !!application.specification },
@@ -86,7 +89,29 @@ export function PatentExportTab({ application, onExportPDF, onExportSectionPDF, 
       </div>
 
       {/* Primary Export Actions - large clickable cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <button
+          onClick={onExportUSPTOPdf}
+          disabled={exportingUspto}
+          className={`flex flex-col items-center gap-3 p-6 rounded-2xl transition-all duration-200 group col-span-2 lg:col-span-1 ${
+            exportingUspto
+              ? 'bg-gray-50 border border-gray-200 opacity-60 cursor-not-allowed'
+              : 'bg-gradient-to-br from-emerald-600 to-teal-600 border border-emerald-600 hover:shadow-lg hover:shadow-emerald-200'
+          }`}
+        >
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${exportingUspto ? 'bg-gray-100' : 'bg-white/20'}`}>
+            {exportingUspto ? (
+              <Loader2 className="w-6 h-6 text-gray-500 animate-spin" />
+            ) : (
+              <FileCheck className="w-6 h-6 text-white" />
+            )}
+          </div>
+          <div className="text-center">
+            <p className={`text-sm font-semibold ${exportingUspto ? 'text-gray-600' : 'text-white'}`}>{exportingUspto ? 'Generating...' : 'USPTO PDF'}</p>
+            <p className={`text-xs mt-0.5 ${exportingUspto ? 'text-gray-400' : 'text-emerald-200'}`}>Filing format</p>
+          </div>
+        </button>
+
         <button
           onClick={handlePrint}
           className="flex flex-col items-center gap-3 p-6 bg-white border border-gray-100 rounded-2xl hover:border-blue-200 hover:shadow-md transition-all duration-200 group"

@@ -184,12 +184,14 @@ Write a thorough technical description that:
 1. Describes preferred embodiments in detail
 2. Explains how components interact
 3. Provides enough detail for a person skilled in the art to reproduce
-4. References figure numbers where appropriate (FIG. 1, FIG. 2, etc.)
+4. References figure numbers where appropriate (e.g., "As illustrated in FIG. 1," or "as shown in FIG. 2")
 5. Uses reference numerals for components (100, 102, 104, etc.)
+6. Do NOT include the section heading itself — write only the body content
+7. Use formal patent language consistent with USPTO filing standards
 
 Use formal patent language throughout.`,
 
-  patent_abstract_generation: `Write a patent abstract for the following invention.
+  patent_abstract_generation: `Write a patent Abstract of the Disclosure for the following invention.
 
 INVENTION TITLE: \${title}
 KEY FEATURES: \${features}
@@ -198,10 +200,10 @@ INVENTION DESCRIPTION: \${inventionDescription}
 Requirements:
 - Must be 150 words or fewer
 - Single paragraph
+- Begin in disclosure style: "An [system/method/platform] for [purpose] is disclosed."
 - Describe the technical disclosure concisely
 - Include the key technical elements
-- Do not use phrases like "This invention relates to" or "is disclosed"
-- Use active voice where possible`,
+- Use formal patent language consistent with USPTO Abstract of the Disclosure format`,
 
   patent_section_regeneration: `Regenerate a patent application section based on feedback.
 

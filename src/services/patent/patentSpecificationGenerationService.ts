@@ -134,19 +134,23 @@ function buildDetailedDescriptionPrompt(vars: {
     overview: `Write an OVERVIEW subsection (2-3 paragraphs) that:
 1. Introduces the overall system by listing the actual features/components above
 2. Describes at a high level how these features work together
-3. References features BY NAME from the list above`,
-    components: `Write a COMPONENTS subsection that describes each feature listed above:
+3. References features BY NAME from the list above
+4. Begin with "The present invention provides a comprehensive system and method for..."`,
+    components: `Write a COMPONENTS AND ARCHITECTURE subsection that describes each feature listed above:
 1. For each feature, write 1-2 paragraphs based on its description and technical details
 2. If code snippets are provided, reference the actual implementation approach shown in the code
-3. Do NOT invent inputs/outputs/data flows not described in the features`,
+3. Do NOT invent inputs/outputs/data flows not described in the features
+4. Where appropriate, reference specific figure numbers (e.g., "As illustrated in FIG. 1," or "as shown in FIG. 2")`,
     algorithms: `Write an ALGORITHMS AND METHODS subsection that:
 1. Describes the algorithms and methods evidenced in the features above
 2. Reference actual code patterns shown in the code snippets
 3. If a feature's technical details mention specific algorithms, describe those
-4. Do NOT invent algorithms not mentioned in the features`,
-    embodiments: `Write a DEPLOYMENT VARIATIONS subsection (1-2 paragraphs) that:
-1. Notes that the features described above could be deployed in web, mobile, or cloud configurations
-2. Keep this brief — do NOT invent detailed alternative architectures`
+4. Do NOT invent algorithms not mentioned in the features
+5. Include mathematical expressions or formulas where relevant to describe algorithmic behavior`,
+    embodiments: `Write a SYSTEM ARCHITECTURE AND MANAGEMENT subsection (1-3 paragraphs) that:
+1. Describes the overall architecture and how components interact
+2. Notes that the features described above could be deployed in web, mobile, or cloud configurations
+3. Reference specific figures where appropriate (e.g., "As shown in FIG. 1,")`
   };
 
   return `You are a patent attorney drafting a Detailed Description of the Invention section for a US patent application.
@@ -163,7 +167,8 @@ ${sectionInstructions[vars.sectionType] || sectionInstructions.overview}
 
 ${GROUNDING_RULE}
 
-Use formal patent language. Write ONLY the section text, no headings or labels.`;
+Use formal patent language. Write ONLY the section text, no headings or labels.
+Do NOT include the "DETAILED DESCRIPTION OF THE INVENTION" heading itself — only write the body content.`;
 }
 
 function buildAbstractPrompt(vars: {
@@ -171,7 +176,7 @@ function buildAbstractPrompt(vars: {
   features: string;
   inventionDescription: string;
 }): string {
-  return `You are a patent attorney drafting an Abstract for a US patent application.
+  return `You are a patent attorney drafting an Abstract of the Disclosure for a US patent application.
 
 INVENTION TITLE: ${vars.title}
 INVENTION DESCRIPTION: ${vars.inventionDescription}
@@ -182,7 +187,7 @@ ${vars.features}
 ${GROUNDING_RULE}
 
 Write a patent Abstract that is EXACTLY 150 words (USPTO maximum). The abstract MUST be a single, complete paragraph — do NOT cut off mid-sentence. Requirements:
-1. Begin with a statement of the technical field
+1. Begin in disclosure style: "An [system/method/platform] for [purpose] is disclosed."
 2. Concisely describe the invention by referencing ONLY the specific features listed above
 3. Highlight the primary technical advantage or problem solved
 4. Use formal patent language appropriate for USPTO filing
@@ -190,6 +195,7 @@ Write a patent Abstract that is EXACTLY 150 words (USPTO maximum). The abstract 
 6. Every component, module, algorithm, or capability mentioned MUST correspond to an actual feature listed above — do NOT invent functionality
 7. If the INVENTION DESCRIPTION is provided, the abstract MUST be consistent with it — it is the authoritative source of what the software does
 8. Do NOT use generic academic or scientific jargon (e.g., "machine learning models", "behavioral patterns", "geospatial processing") unless those terms appear in the features or invention description
+9. Use "is disclosed" style opening consistent with USPTO Abstract of the Disclosure format
 
 Write ONLY the abstract text — no headings, labels, or word counts.`;
 }
@@ -286,8 +292,8 @@ function buildReferenceNumberContext(drawings: PatentDrawingData[]): string {
 
 function generateBriefDescriptionOfDrawings(drawings: PatentDrawingData[]): string {
   return drawings
-    .map(d => `FIG. ${d.figure_number} is a ${d.figure_title.toLowerCase()}.`)
-    .join('\n\n');
+    .map(d => `    FIG. ${d.figure_number} is a ${d.figure_title.toLowerCase()} according to an embodiment of the present invention.`)
+    .join('\n');
 }
 
 function extractReferenceNumbersFromDrawings(drawings: PatentDrawingData[]): ReferenceNumber[] {
@@ -611,14 +617,22 @@ async function generateDetailedDescriptionSection(
       }
     : inventionContext;
 
-  const chunks = await Promise.all([
-    generateDetailedDescriptionChunk('overview', title, features, inventionContextWithRefs, projectId),
-    generateDetailedDescriptionChunk('components', title, features, inventionContextWithRefs, projectId),
-    generateDetailedDescriptionChunk('algorithms', title, features, inventionContextWithRefs, projectId),
-    generateDetailedDescriptionChunk('embodiments', title, features, inventionContextWithRefs, projectId)
-  ]);
+  const chunkTypes: { type: 'overview' | 'components' | 'algorithms' | 'embodiments'; romanNumeral: string; title: string }[] = [
+    { type: 'overview', romanNumeral: 'I', title: 'Overview' },
+    { type: 'components', romanNumeral: 'II', title: 'Components and Architecture' },
+    { type: 'algorithms', romanNumeral: 'III', title: 'Algorithms and Methods' },
+    { type: 'embodiments', romanNumeral: 'IV', title: 'System Architecture and Management' }
+  ];
 
-  sections.push(...chunks.filter(c => c.length > 0));
+  const chunks = await Promise.all(
+    chunkTypes.map(ct => generateDetailedDescriptionChunk(ct.type, title, features, inventionContextWithRefs, projectId))
+  );
+
+  chunks.forEach((chunk, i) => {
+    if (chunk.length > 0) {
+      sections.push(`${chunkTypes[i].romanNumeral}. ${chunkTypes[i].title}\n${chunk}`);
+    }
+  });
 
   return sections.join('\n\n');
 }

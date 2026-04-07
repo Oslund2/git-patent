@@ -901,11 +901,21 @@ export function svgToDataUrl(svg: string): string {
 export function formatDrawingsDescriptionSection(drawings: PatentDrawing[]): string {
   const sorted = [...drawings].sort((a, b) => a.figure_number - b.figure_number);
 
+  const drawingTypeLabels: Record<string, string> = {
+    block_diagram: 'a block diagram',
+    flowchart: 'a flowchart',
+    wireframe: 'a wireframe illustration',
+    schematic: 'a schematic diagram',
+    sequence_diagram: 'a sequence diagram'
+  };
+
   let description = 'BRIEF DESCRIPTION OF THE DRAWINGS\n\n';
-  description += 'The present invention will be more fully understood from the following detailed description taken in conjunction with the accompanying drawings, in which:\n\n';
+  description += 'The accompanying drawings, which are incorporated in and constitute a part of this specification, illustrate embodiments of the invention and, together with the description, serve to explain the principles of the invention.\n\n';
 
   for (const drawing of sorted) {
-    description += `${drawing.description}\n\n`;
+    const typeLabel = drawingTypeLabels[drawing.drawing_type] || 'a diagram';
+    const titleLower = drawing.title.toLowerCase();
+    description += `    FIG. ${drawing.figure_number} is ${typeLabel} illustrating the ${titleLower} according to an embodiment of the present invention.\n`;
   }
 
   return description;
