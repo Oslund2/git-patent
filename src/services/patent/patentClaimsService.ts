@@ -163,7 +163,9 @@ async function generateIndependentClaims(
     (response) => {
       let claims: string[] = [];
 
-      // Try parsing as a JSON object with a "claims" key first
+      console.log('Raw AI claims response (first 500 chars):', response.substring(0, 500));
+
+      // Strategy 1: Try parsing as a JSON object with a "claims" key
       try {
         const objMatch = response.match(/\{[\s\S]*\}/);
         if (objMatch) {
@@ -176,19 +178,45 @@ async function generateIndependentClaims(
             });
           }
         }
-      } catch { /* fall through to array parsing */ }
+      } catch { /* fall through */ }
 
-      // If no claims from object parsing, try as a flat JSON array
+      // Strategy 2: Try as a flat JSON array
       if (claims.length === 0) {
-        const rawClaims = parseJSONArray<any>(response);
-        claims = rawClaims.map((c: any) => {
-          if (typeof c === 'string') return c;
-          if (typeof c === 'object' && c !== null) return c.text || c.claim_text || c.claimText || '';
-          return '';
-        });
+        try {
+          const rawClaims = parseJSONArray<any>(response);
+          claims = rawClaims.map((c: any) => {
+            if (typeof c === 'string') return c;
+            if (typeof c === 'object' && c !== null) return c.text || c.claim_text || c.claimText || '';
+            return '';
+          });
+        } catch { /* fall through */ }
+      }
+
+      // Strategy 3: Extract claim-like text blocks from plain text
+      // Matches numbered claims starting with "1." or "Claim 1:" etc.
+      if (claims.length === 0) {
+        const claimPattern = /(?:^|\n)\s*(?:Claim\s+)?\d+[\.\):\s]+\s*(A (?:method|system|computer-readable medium|non-transitory|apparatus)[\s\S]*?)(?=(?:\n\s*(?:Claim\s+)?\d+[\.\):\s]+\s*A )|$)/gi;
+        let match;
+        while ((match = claimPattern.exec(response)) !== null) {
+          const text = match[1]?.trim();
+          if (text && text.length > 50) claims.push(text);
+        }
+        if (claims.length > 0) {
+          console.log(`Extracted ${claims.length} claims via text pattern matching`);
+        }
+      }
+
+      // Strategy 4: If response looks like a single claim, use it
+      if (claims.length === 0 && response.length > 100) {
+        const trimmed = response.replace(/```[\s\S]*?```/g, '').trim();
+        if (trimmed.toLowerCase().startsWith('a method') || trimmed.toLowerCase().startsWith('a system') || trimmed.toLowerCase().startsWith('a non-transitory')) {
+          claims.push(trimmed);
+          console.log('Used entire response as single claim');
+        }
       }
 
       claims = claims.filter((c: string) => typeof c === 'string' && c.length > 50);
+      console.log(`Parsed ${claims.length} independent claims`);
       if (claims.length < 2) {
         console.warn(`AI generated only ${claims.length} independent claims, expected 2-4`);
       }
@@ -255,7 +283,44 @@ async function generateDependentClaims(
   const result = await makeAIRequest<DependentClaimItem[]>(
     prompt,
     (response) => {
-      const claims = parseJSONArray<DependentClaimItem>(response, isValidDependentClaim);
+      console.log('Raw AI dependent claims response (first 500 chars):', response.substring(0, 500));
+      let claims: DependentClaimItem[] = [];
+
+      // Strategy 1: Try as JSON object with "claims" key
+      try {
+        const objMatch = response.match(/\{[\s\S]*\}/);
+        if (objMatch) {
+          const obj = JSON.parse(objMatch[0]);
+          if (obj.claims && Array.isArray(obj.claims)) {
+            claims = obj.claims.filter(isValidDependentClaim);
+          }
+        }
+      } catch { /* fall through */ }
+
+      // Strategy 2: Try as flat JSON array
+      if (claims.length === 0) {
+        try {
+          claims = parseJSONArray<DependentClaimItem>(response, isValidDependentClaim);
+        } catch { /* fall through */ }
+      }
+
+      // Strategy 3: Extract dependent claims from text
+      if (claims.length === 0) {
+        const depPattern = /(?:^|\n)\s*(?:Claim\s+)?(\d+)[\.\):\s]+\s*(The (?:method|system|apparatus|medium) of claim (\d+)[\s\S]*?)(?=(?:\n\s*(?:Claim\s+)?\d+[\.\):\s]+)|$)/gi;
+        let match;
+        while ((match = depPattern.exec(response)) !== null) {
+          const text = match[2]?.trim();
+          const parentNum = parseInt(match[3], 10) || 1;
+          if (text && text.length > 30) {
+            claims.push({ claimText: text, parentClaimNumber: parentNum });
+          }
+        }
+        if (claims.length > 0) {
+          console.log(`Extracted ${claims.length} dependent claims via text pattern matching`);
+        }
+      }
+
+      console.log(`Parsed ${claims.length} dependent claims`);
       if (claims.length < 10) {
         console.warn(`AI generated only ${claims.length} dependent claims, expected 10-18`);
       }
