@@ -152,14 +152,41 @@ export async function fetchReadmeContent(
   token?: string
 ): Promise<string | null> {
   try {
+    // Strategy 1: Use GitHub's dedicated README API (most reliable)
+    const readmeResponse = await fetch(
+      `${GITHUB_API}/repos/${owner}/${repo}/readme`,
+      { headers: getHeaders(token) }
+    );
+    if (readmeResponse.ok) {
+      const readmeData = await readmeResponse.json();
+      if (readmeData.encoding === 'base64' && readmeData.content) {
+        try {
+          const content = atob(readmeData.content.replace(/\n/g, ''));
+          if (content && content.length > 0) {
+            console.log(`README fetched via API (${content.length} chars)`);
+            return content.substring(0, 10000);
+          }
+        } catch { /* fall through to tree strategy */ }
+      }
+    }
+
+    // Strategy 2: Fall back to tree search with case-insensitive matching
     const tree = await fetchRepoTree(owner, repo, branch, token);
-    const readmeNames = ['README.md', 'readme.md', 'README', 'README.rst', 'Readme.md'];
-    const readmeEntry = tree.find(entry => readmeNames.includes(entry.path));
-    if (!readmeEntry) return null;
+    const readmeEntry = tree.find(entry => {
+      const name = entry.path.split('/').pop() || '';
+      return /^readme(\.(md|txt|rst|markdown))?$/i.test(name) && !entry.path.includes('/');
+    });
+    if (!readmeEntry) {
+      console.warn(`No README found in repo tree for ${owner}/${repo}`);
+      return null;
+    }
     const content = await fetchBlobContent(owner, repo, readmeEntry.sha, token);
-    // Truncate to 5000 chars to avoid bloating the DB/prompts
-    return content ? content.substring(0, 5000) : null;
-  } catch {
+    if (content) {
+      console.log(`README fetched via tree (${content.length} chars, path: ${readmeEntry.path})`);
+    }
+    return content ? content.substring(0, 10000) : null;
+  } catch (err) {
+    console.error('README fetch failed:', err);
     return null;
   }
 }

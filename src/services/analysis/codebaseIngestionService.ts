@@ -116,7 +116,7 @@ async function extractFromZip(zipData: ArrayBuffer | File): Promise<{ files: Cod
   if (readmeEntry) {
     try {
       const raw = await readmeEntry[1].async('string');
-      readmeContent = raw.slice(0, 5000);
+      readmeContent = raw.slice(0, 10000);
     } catch { /* README is optional */ }
   }
 
