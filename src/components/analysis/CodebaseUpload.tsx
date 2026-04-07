@@ -317,31 +317,59 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
         )}
       </div>
 
-      {/* Source type toggle */}
+      {/* Source type selector cards */}
       {!loading && !progress && (
-        <div className="max-w-2xl mx-auto mb-4">
-          <div className="flex bg-gray-100 rounded-xl p-1">
+        <div className="max-w-2xl mx-auto mb-6">
+          <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => { setSourceType('github'); setError(''); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+              className={`relative flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all duration-200 ${
                 sourceType === 'github'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'border-patent-500 bg-patent-50/50 shadow-md shadow-patent-500/10'
+                  : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
               }`}
             >
-              <GitFork className="w-4 h-4" />
-              GitHub URL
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+                sourceType === 'github'
+                  ? 'bg-gradient-to-br from-patent-500 to-indigo-500'
+                  : 'bg-gray-100'
+              }`}>
+                <GitFork className={`w-6 h-6 ${sourceType === 'github' ? 'text-white' : 'text-gray-500'}`} />
+              </div>
+              <div className="text-center">
+                <p className={`font-semibold text-sm ${sourceType === 'github' ? 'text-gray-900' : 'text-gray-700'}`}>GitHub URL</p>
+                <p className="text-xs text-gray-500 mt-0.5">Paste a repository link</p>
+              </div>
+              {sourceType === 'github' && (
+                <div className="absolute top-3 right-3">
+                  <CheckCircle className="w-5 h-5 text-patent-500" />
+                </div>
+              )}
             </button>
             <button
               onClick={() => { setSourceType('zip'); setError(''); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+              className={`relative flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all duration-200 ${
                 sourceType === 'zip'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'border-violet-500 bg-violet-50/50 shadow-md shadow-violet-500/10'
+                  : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
               }`}
             >
-              <Upload className="w-4 h-4" />
-              ZIP Upload
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+                sourceType === 'zip'
+                  ? 'bg-gradient-to-br from-violet-500 to-purple-500'
+                  : 'bg-gray-100'
+              }`}>
+                <Upload className={`w-6 h-6 ${sourceType === 'zip' ? 'text-white' : 'text-gray-500'}`} />
+              </div>
+              <div className="text-center">
+                <p className={`font-semibold text-sm ${sourceType === 'zip' ? 'text-gray-900' : 'text-gray-700'}`}>ZIP Upload</p>
+                <p className="text-xs text-gray-500 mt-0.5">Upload a .zip of your code</p>
+              </div>
+              {sourceType === 'zip' && (
+                <div className="absolute top-3 right-3">
+                  <CheckCircle className="w-5 h-5 text-violet-500" />
+                </div>
+              )}
             </button>
           </div>
         </div>
