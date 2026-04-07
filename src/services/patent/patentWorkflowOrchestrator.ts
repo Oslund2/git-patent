@@ -115,16 +115,18 @@ export async function generateCompletePatentApplication(
     if (!config.skipPriorArtSearch) {
       updateProgress(`Searching prior art for "${config.title.substring(0, 50)}"...`);
       let priorArtCount = 0;
+      let topPriorArt = '';
       try {
         const paResults = await searchPriorArt(config.projectId, config.applicationId, {
           title: config.title,
           description: hasInventionDescription ? inventionDesc : config.description
         });
         priorArtCount = paResults?.length || 0;
+        topPriorArt = (paResults || []).slice(0, 3).map((r: any) => r.patent_title || r.title || 'Untitled').join('|');
       } catch (priorArtError) {
         console.error('Prior art search failed, continuing pipeline:', priorArtError);
       }
-      updateProgress('Prior art search completed', 'completed', { priorArtCount });
+      updateProgress('Prior art search completed', 'completed', { priorArtCount, topPriorArt });
     }
 
     updateProgress('Extracting technical features from codebase...');
@@ -142,7 +144,8 @@ export async function generateCompletePatentApplication(
     } else {
       features = await extractCodebaseFeatures(config.projectId);
     }
-    updateProgress('Feature extraction completed', 'completed', { featureCount: features.features.length });
+    const topFeatures = features.features.slice(0, 5).map((f: any) => f.name || f.feature_name || 'Feature').join('|');
+    updateProgress('Feature extraction completed', 'completed', { featureCount: features.features.length, topFeatures });
 
     updateProgress('Analyzing patentability and novelty...');
     const noveltyAnalysis = await performNoveltyAnalysis(
@@ -224,7 +227,9 @@ export async function generateCompletePatentApplication(
         config.title,
         inventionDesc
       );
-      updateProgress('Claims generation completed', 'completed', { claimsCount: claims.length });
+      const firstIndependent = claims.find((c: any) => c.claim_type === 'independent');
+      const firstClaimPreview = firstIndependent ? firstIndependent.claim_text.substring(0, 200) : '';
+      updateProgress('Claims generation completed', 'completed', { claimsCount: claims.length, firstClaimPreview });
     }
 
     updateProgress('Generating patent drawings from features...');

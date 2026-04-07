@@ -7,6 +7,15 @@ import { analyzeCodebase } from '../../services/analysis/codebaseAnalysisEngine'
 import { runFullIPAnalysis, type ApplicantInfo } from '../../services/orchestration/ipAutoOrchestrator';
 import { supabase } from '../../lib/supabase';
 import type { AnalysisProgress } from '../../types';
+import {
+  updatePatentApplication,
+  type InventorInfo,
+  type CorrespondenceAddressInfo,
+  type AttorneyInfoData,
+} from '../../services/patent/patentApplicationService';
+import { PipelineTips } from './PipelineTips';
+import { PipelineInsights } from './PipelineInsights';
+import { FilingInfoWizard } from './FilingInfoWizard';
 
 interface CodebaseUploadProps {
   onAnalysisComplete: (project: any) => void;
@@ -39,6 +48,10 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
   const [elapsed, setElapsed] = useState(0);
   const [metrics, setMetrics] = useState<Record<string, string>>({});
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [wizardInventors, setWizardInventors] = useState<InventorInfo[]>([]);
+  const [wizardCorrespondence, setWizardCorrespondence] = useState<CorrespondenceAddressInfo | null>(null);
+  const [wizardAttorney, setWizardAttorney] = useState<AttorneyInfoData | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(true);
   const startRef = useRef(0);
 
   useEffect(() => {
@@ -90,7 +103,7 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
     const applicant: ApplicantInfo | undefined = inventorName.trim()
       ? { inventorName: inventorName.trim(), entityStatus, citizenship: citizenship.trim() || undefined }
       : undefined;
-    await runFullIPAnalysis(project.id, user!.id, project.name, (ipProgress) => {
+    const ipResult = await runFullIPAnalysis(project.id, user!.id, project.name, (ipProgress) => {
       const basePercent = 55;
       const pct = basePercent + Math.round(ipProgress.overallPercent * 0.4);
       const stepKey = ipProgress.phase === 'patents' ? 'generating_patents' : 'assessing_ip';
@@ -112,10 +125,31 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
           if (m.claimsCount) next.claims = `${m.claimsCount} claims`;
           if (m.drawingsCount) next.drawings = `${m.drawingsCount} drawings`;
           if (m.priorArtCount) next.priorArt = `${m.priorArtCount} prior art`;
+          if (m.topFeatures) next.topFeatures = String(m.topFeatures);
+          if (m.topPriorArt) next.topPriorArt = String(m.topPriorArt);
+          if (m.firstClaimPreview) next.firstClaimPreview = String(m.firstClaimPreview);
           return next;
         });
       }
     }, applicant);
+
+    // Persist filing wizard data to created patent applications
+    if (ipResult?.patentApplicationIds?.length > 0) {
+      const hasWizardData = wizardInventors.length > 0 || wizardCorrespondence || wizardAttorney;
+      if (hasWizardData) {
+        for (const appId of ipResult.patentApplicationIds) {
+          try {
+            await updatePatentApplication(appId, {
+              ...(wizardInventors.length > 0 && { inventors: wizardInventors }),
+              ...(wizardCorrespondence && { correspondence_address: wizardCorrespondence }),
+              ...(wizardAttorney && { attorney_info: wizardAttorney }),
+            });
+          } catch (err) {
+            console.error('Failed to apply filing info to patent', appId, err);
+          }
+        }
+      }
+    }
 
     // Check if prior art search produced results — warn if not
     setMetrics(prev => {
@@ -654,10 +688,12 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
             />
           </div>
 
-          {/* Live metrics */}
+          {/* Live metrics badges */}
           {Object.keys(metrics).length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">
-              {Object.entries(metrics).map(([key, value]) => (
+              {Object.entries(metrics)
+                .filter(([key]) => !['topFeatures', 'topPriorArt', 'firstClaimPreview'].includes(key))
+                .map(([key, value]) => (
                 <span key={key} className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100">
                   <CheckCircle className="w-3 h-3 text-green-500" />
                   {value}
@@ -668,6 +704,30 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
 
           {progress.detail && (
             <p className="text-xs text-gray-400 mt-2 truncate">{progress.detail}</p>
+          )}
+
+          {/* Pipeline Insights — richer incremental results */}
+          <PipelineInsights metrics={metrics} />
+
+          {/* Patent 101 Tips — contextual education */}
+          {loading && progress.step !== 'complete' && (
+            <PipelineTips currentStep={progress.step} />
+          )}
+
+          {/* Filing Info Wizard — productive use of wait time */}
+          {loading && progress.step !== 'complete' && (
+            <FilingInfoWizard
+              inventors={wizardInventors}
+              onInventorsChange={setWizardInventors}
+              correspondence={wizardCorrespondence}
+              onCorrespondenceChange={setWizardCorrespondence}
+              attorney={wizardAttorney}
+              onAttorneyChange={setWizardAttorney}
+              isOpen={wizardOpen}
+              onToggle={() => setWizardOpen(o => !o)}
+              primaryInventorName={inventorName}
+              primaryCitizenship={citizenship}
+            />
           )}
         </div>
       )}
