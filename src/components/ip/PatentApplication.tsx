@@ -15,7 +15,8 @@ import {
   ClipboardCheck,
   Trash2,
   Users,
-  Scale
+  Scale,
+  Eye
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProject } from '../../contexts/ProjectContext';
@@ -67,12 +68,13 @@ import { PatentClaimsTab } from './patent/PatentClaimsTab';
 import { PatentDrawingsTab } from './patent/PatentDrawingsTab';
 import { PatentAbstractTab } from './patent/PatentAbstractTab';
 import { PatentExportTab } from './patent/PatentExportTab';
+import { PatentDocumentPreview } from './patent/PatentDocumentPreview';
 import { PatentPriorArtTab } from './patent/PatentPriorArtTab';
 import { PatentAnalysisTab } from './patent/PatentAnalysisTab';
 import { PatentFilingTab } from './patent/PatentFilingTab';
 import { PatentLegalBriefTab } from './patent/PatentLegalBriefTab';
 
-type TabId = 'overview' | 'applicant' | 'specification' | 'claims' | 'drawings' | 'abstract' | 'prior-art' | 'analysis' | 'legal-brief' | 'filing' | 'export';
+type TabId = 'overview' | 'applicant' | 'specification' | 'claims' | 'drawings' | 'abstract' | 'prior-art' | 'analysis' | 'legal-brief' | 'filing' | 'preview' | 'export';
 
 // --- Generation Progress Modal ---
 
@@ -696,6 +698,7 @@ Respond with ONLY the JSON object.`;
     { id: 'analysis', label: 'Analysis', icon: BarChart3 },
     { id: 'legal-brief', label: 'Legal Brief', icon: Scale },
     { id: 'filing', label: 'Filing', icon: ClipboardCheck },
+    { id: 'preview', label: 'Preview', icon: Eye },
     { id: 'export', label: 'Export', icon: Download }
   ];
 
@@ -971,6 +974,17 @@ Respond with ONLY the JSON object.`;
                     onGenerateCoverSheet={handleGenerateCoverSheet}
                     coverSheetHTML={coverSheetHTMLContent}
                     generatingCoverSheet={generatingCoverSheet}
+                  />
+                )}
+
+                {activeTab === 'preview' && (
+                  <PatentDocumentPreview
+                    application={selectedApp}
+                    onUpdate={async (updates) => {
+                      await updatePatentApplication(selectedApp.id, updates);
+                      const refreshed = await getPatentApplication(selectedApp.id, user!.id);
+                      if (refreshed) setSelectedApp(refreshed);
+                    }}
                   />
                 )}
 
