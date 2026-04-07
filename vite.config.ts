@@ -11,9 +11,9 @@ export default defineConfig(({ mode }) => {
       build: {
         lib: {
           entry: resolve(__dirname, 'src/embed.tsx'),
-          name: 'IPShield',
+          name: 'GitPatent',
           formats: ['es'],
-          fileName: 'ip-shield',
+          fileName: 'git-patent',
         },
         rollupOptions: {
           external: ['react', 'react-dom', 'react/jsx-runtime'],

@@ -1,5 +1,5 @@
 /**
- * Prompt resolver for IP Shield.
+ * Prompt resolver for Git-Patent.
  * Uses inline fallback/defaults only (no database prompt_library lookup).
  */
 

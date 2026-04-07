@@ -9,7 +9,7 @@ interface ProjectListProps {
 
 const STATUS_CONFIG = {
   pending: { icon: Clock, color: 'text-gray-400', bg: 'bg-gray-100', label: 'Pending' },
-  analyzing: { icon: Loader2, color: 'text-shield-600', bg: 'bg-shield-100', label: 'Analyzing', animate: true },
+  analyzing: { icon: Loader2, color: 'text-patent-600', bg: 'bg-patent-100', label: 'Analyzing', animate: true },
   completed: { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-100', label: 'Complete' },
   failed: { icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-100', label: 'Failed' },
 };
@@ -20,7 +20,7 @@ export function ProjectList({ onSelectProject, onNewProject }: ProjectListProps)
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 text-shield-600 animate-spin" />
+        <Loader2 className="w-8 h-8 text-patent-600 animate-spin" />
       </div>
     );
   }
@@ -38,7 +38,7 @@ export function ProjectList({ onSelectProject, onNewProject }: ProjectListProps)
         </div>
         <button
           onClick={onNewProject}
-          className="flex items-center gap-2 bg-gradient-to-r from-shield-600 to-indigo-600 text-white px-6 py-3 rounded-xl hover:shadow-lg hover:shadow-shield-600/25 transition-all font-semibold text-base"
+          className="flex items-center gap-2 bg-gradient-to-r from-patent-600 to-indigo-600 text-white px-6 py-3 rounded-xl hover:shadow-lg hover:shadow-patent-600/25 transition-all font-semibold text-base"
         >
           <Plus className="w-5 h-5" /> New Analysis
         </button>
@@ -66,7 +66,7 @@ export function ProjectList({ onSelectProject, onNewProject }: ProjectListProps)
                 onClick={() => project.analysis_status === 'completed' && onSelectProject(project)}
                 className={`bg-white border border-gray-100 rounded-2xl p-6 transition-all group shadow-sm ${
                   project.analysis_status === 'completed'
-                    ? 'cursor-pointer hover:shadow-md hover:border-shield-200 hover:bg-gradient-to-br hover:from-white hover:to-shield-50/30'
+                    ? 'cursor-pointer hover:shadow-md hover:border-patent-200 hover:bg-gradient-to-br hover:from-white hover:to-patent-50/30'
                     : ''
                 }`}
               >
@@ -74,7 +74,7 @@ export function ProjectList({ onSelectProject, onNewProject }: ProjectListProps)
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                       project.source_type === 'github_url'
-                        ? 'bg-gray-100 text-gray-500 group-hover:bg-shield-100 group-hover:text-shield-600'
+                        ? 'bg-gray-100 text-gray-500 group-hover:bg-patent-100 group-hover:text-patent-600'
                         : 'bg-violet-50 text-violet-500'
                     } transition-colors`}>
                       {project.source_type === 'github_url' ? (
@@ -122,10 +122,10 @@ export function ProjectList({ onSelectProject, onNewProject }: ProjectListProps)
                 {/* Status dot animation for analyzing */}
                 {project.analysis_status === 'analyzing' && (
                   <div className="flex items-center gap-1.5 mt-4">
-                    <span className="w-1.5 h-1.5 rounded-full bg-shield-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-shield-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-shield-500 animate-bounce" style={{ animationDelay: '300ms' }} />
-                    <span className="text-xs text-shield-500 ml-1">Analysis in progress</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-patent-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-patent-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-patent-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <span className="text-xs text-patent-500 ml-1">Analysis in progress</span>
                   </div>
                 )}
               </div>

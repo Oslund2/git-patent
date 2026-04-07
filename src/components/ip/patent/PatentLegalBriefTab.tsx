@@ -286,7 +286,7 @@ export function PatentLegalBriefTab({ applicationId, projectId }: PatentLegalBri
             <button onClick={handleDownload}
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-semibold rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all shadow-md shadow-violet-200">
               <Download className="w-4 h-4" />
-              Download IP Shield Legal Brief
+              Download Git-Patent Legal Brief
             </button>
           </div>
         </>

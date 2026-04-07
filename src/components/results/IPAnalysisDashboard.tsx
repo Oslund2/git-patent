@@ -118,7 +118,7 @@ export function IPAnalysisDashboard({ onAdvancedMode, onViewPatent }: IPAnalysis
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto">
-        <div className="bg-gradient-to-r from-shield-600 via-blue-500 to-indigo-600 rounded-3xl p-10 text-white relative overflow-hidden">
+        <div className="bg-gradient-to-r from-patent-600 via-blue-500 to-indigo-600 rounded-3xl p-10 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
           <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
           <div className="relative z-10 flex flex-col items-center justify-center py-8 gap-4">
@@ -141,7 +141,7 @@ export function IPAnalysisDashboard({ onAdvancedMode, onViewPatent }: IPAnalysis
           <p className="text-sm text-gray-500 mb-4">{error}</p>
           <button
             onClick={loadAll}
-            className="px-5 py-2.5 bg-gradient-to-r from-shield-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg hover:shadow-shield-200 transition-all"
+            className="px-5 py-2.5 bg-gradient-to-r from-patent-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg hover:shadow-patent-200 transition-all"
           >
             Retry
           </button>
@@ -154,7 +154,7 @@ export function IPAnalysisDashboard({ onAdvancedMode, onViewPatent }: IPAnalysis
   if (totalAssets === 0) {
     return (
       <div className="max-w-4xl mx-auto">
-        <div className="bg-gradient-to-r from-shield-600 via-blue-500 to-indigo-600 rounded-3xl p-10 text-white relative overflow-hidden">
+        <div className="bg-gradient-to-r from-patent-600 via-blue-500 to-indigo-600 rounded-3xl p-10 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
           <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
           <div className="relative z-10 flex flex-col items-center justify-center py-8 gap-4">
@@ -168,7 +168,7 @@ export function IPAnalysisDashboard({ onAdvancedMode, onViewPatent }: IPAnalysis
             <div className="flex items-center gap-3 mt-2">
               <button
                 onClick={onAdvancedMode}
-                className="px-6 py-2.5 bg-white text-shield-600 rounded-xl text-sm font-semibold hover:shadow-lg transition-all"
+                className="px-6 py-2.5 bg-white text-patent-600 rounded-xl text-sm font-semibold hover:shadow-lg transition-all"
               >
                 Open Advanced Editor
               </button>
@@ -188,7 +188,7 @@ export function IPAnalysisDashboard({ onAdvancedMode, onViewPatent }: IPAnalysis
   return (
     <div className="max-w-4xl mx-auto space-y-10">
       {/* ── Hero Card ── */}
-      <div className="bg-gradient-to-r from-shield-600 via-blue-500 to-indigo-600 rounded-3xl p-10 text-white relative overflow-hidden">
+      <div className="bg-gradient-to-r from-patent-600 via-blue-500 to-indigo-600 rounded-3xl p-10 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
 
@@ -247,8 +247,8 @@ export function IPAnalysisDashboard({ onAdvancedMode, onViewPatent }: IPAnalysis
       {patents.length > 0 && (
         <section>
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 bg-gradient-to-br from-shield-100 to-blue-100 rounded-xl flex items-center justify-center">
-              <FileText className="w-5 h-5 text-shield-700" />
+            <div className="w-10 h-10 bg-gradient-to-br from-patent-100 to-blue-100 rounded-xl flex items-center justify-center">
+              <FileText className="w-5 h-5 text-patent-700" />
             </div>
             <h3 className="text-xl font-bold text-gray-900">Patent Applications</h3>
             <span className="text-sm text-gray-400 ml-auto">{patents.length} application{patents.length !== 1 ? 's' : ''}</span>
@@ -258,7 +258,7 @@ export function IPAnalysisDashboard({ onAdvancedMode, onViewPatent }: IPAnalysis
             {patents.map(patent => (
               <div
                 key={patent.id}
-                className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all border-l-4 border-l-shield-500"
+                className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all border-l-4 border-l-patent-500"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
@@ -291,7 +291,7 @@ export function IPAnalysisDashboard({ onAdvancedMode, onViewPatent }: IPAnalysis
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                       onClick={() => onViewPatent(patent.id)}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-shield-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg hover:shadow-shield-200 transition-all"
+                      className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-patent-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg hover:shadow-patent-200 transition-all"
                     >
                       <Eye className="w-4 h-4" />
                       View

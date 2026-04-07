@@ -52,7 +52,7 @@ const TOC_ENTRIES: TocEntry[] = [
 ];
 
 const CLAIM_TYPE_BADGE: Record<string, string> = {
-  independent: 'bg-shield-50 text-shield-700 border-shield-200',
+  independent: 'bg-patent-50 text-patent-700 border-patent-200',
   dependent: 'bg-gray-50 text-gray-600 border-gray-200',
 };
 
@@ -148,7 +148,7 @@ export function PatentDocumentViewer({ applicationId, onBack, onAdvancedMode }: 
     return (
       <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-shield-600" />
+          <Loader2 className="w-8 h-8 animate-spin text-patent-600" />
           <span className="text-sm text-gray-500">Loading patent document...</span>
         </div>
       </div>
@@ -164,7 +164,7 @@ export function PatentDocumentViewer({ applicationId, onBack, onAdvancedMode }: 
           <p className="text-sm text-gray-500 mb-4">{error || 'Patent application not found.'}</p>
           <button
             onClick={onBack}
-            className="px-5 py-2.5 bg-gradient-to-r from-shield-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg hover:shadow-shield-200 transition-all"
+            className="px-5 py-2.5 bg-gradient-to-r from-patent-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg hover:shadow-patent-200 transition-all"
           >
             Go Back
           </button>
@@ -177,7 +177,7 @@ export function PatentDocumentViewer({ applicationId, onBack, onAdvancedMode }: 
     if (!content) return null;
     return (
       <div id={`section-${id}`} className="mb-10">
-        <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wide border-b-2 border-shield-100 pb-2 mb-4 font-sans">
+        <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wide border-b-2 border-patent-100 pb-2 mb-4 font-sans">
           {title}
         </h2>
         <div className="text-base text-gray-800 leading-[1.8] font-serif whitespace-pre-wrap">
@@ -215,7 +215,7 @@ export function PatentDocumentViewer({ applicationId, onBack, onAdvancedMode }: 
           </button>
           <button
             onClick={onAdvancedMode}
-            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-shield-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg hover:shadow-shield-200 transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-patent-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg hover:shadow-patent-200 transition-all"
           >
             <Settings2 className="w-4 h-4" />
             Edit in Advanced Mode
@@ -252,7 +252,7 @@ export function PatentDocumentViewer({ applicationId, onBack, onAdvancedMode }: 
                       onClick={() => scrollToSection(entry.id)}
                       className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all text-left ${
                         isActive
-                          ? 'bg-shield-50 text-shield-700'
+                          ? 'bg-patent-50 text-patent-700'
                           : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
                       }`}
                     >
@@ -317,7 +317,7 @@ export function PatentDocumentViewer({ applicationId, onBack, onAdvancedMode }: 
           {/* Detailed Description */}
           {(application.detailed_description || application.specification) && (
             <div id="section-description" className="mb-10">
-              <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wide border-b-2 border-shield-100 pb-2 mb-4 font-sans">
+              <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wide border-b-2 border-patent-100 pb-2 mb-4 font-sans">
                 Detailed Description of the Invention
               </h2>
               <div className="text-base text-gray-800 leading-[1.8] font-serif whitespace-pre-wrap">
@@ -329,7 +329,7 @@ export function PatentDocumentViewer({ applicationId, onBack, onAdvancedMode }: 
           {/* Claims */}
           {claims.length > 0 && (
             <div id="section-claims" className="mb-10">
-              <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wide border-b-2 border-shield-100 pb-2 mb-4 font-sans">
+              <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wide border-b-2 border-patent-100 pb-2 mb-4 font-sans">
                 Claims
               </h2>
               <p className="text-sm text-gray-500 mb-5 font-sans">
@@ -367,7 +367,7 @@ export function PatentDocumentViewer({ applicationId, onBack, onAdvancedMode }: 
           {/* Drawings */}
           {drawings.length > 0 && (
             <div id="section-drawings" className="mb-10">
-              <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wide border-b-2 border-shield-100 pb-2 mb-4 font-sans">
+              <h2 className="text-lg font-bold text-gray-900 uppercase tracking-wide border-b-2 border-patent-100 pb-2 mb-4 font-sans">
                 Drawings
               </h2>
               <div className="space-y-8">

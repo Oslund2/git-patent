@@ -1,5 +1,5 @@
 /**
- * Patent Filing Readiness Report — "IP Shield Legal Brief"
+ * Patent Filing Readiness Report — "Git-Patent Legal Brief"
  *
  * Generates a comprehensive legal assessment PDF that bridges
  * automated analysis and attorney review. Accompanies SB/16 and SB/17.
@@ -735,7 +735,7 @@ export function generateLegalBriefPDF(data: LegalBriefData): jsPDF {
     doc.setFontSize(7);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(150, 150, 150);
-    doc.text('IP Shield — Patent Filing Readiness Report — Confidential', PW / 2, PH - 30, { align: 'center' });
+    doc.text('Git-Patent — Patent Filing Readiness Report — Confidential', PW / 2, PH - 30, { align: 'center' });
     doc.text(`Page ${i} of ${totalPages}`, PW - M, PH - 30, { align: 'right' });
     doc.setTextColor(0, 0, 0);
   }

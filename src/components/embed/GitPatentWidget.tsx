@@ -83,7 +83,7 @@ function WidgetContent({
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
 
   return (
-    <div className="ip-shield-widget">
+    <div className="ip-patent-widget">
       {view === 'projects' && (
         <ProjectList
           onSelectProject={(project) => { setCurrentProject(project); setView('results'); }}
@@ -137,7 +137,7 @@ export function IPShieldWidget({
   if (!ready) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-shield-600 border-t-transparent" />
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-patent-600 border-t-transparent" />
       </div>
     );
   }

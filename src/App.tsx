@@ -73,7 +73,7 @@ function AppContent() {
                 <Shield className="w-4.5 h-4.5 text-white" />
               </div>
               <span className="text-lg font-bold bg-gradient-to-r from-indigo-700 to-violet-600 bg-clip-text text-transparent">
-                IP Shield
+                Git-Patent
               </span>
             </div>
 

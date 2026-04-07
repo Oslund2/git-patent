@@ -58,7 +58,7 @@ export function SignUpPage({ onToggleLogin }: SignUpPageProps) {
             </p>
             <button
               onClick={onToggleLogin}
-              className="text-shield-600 hover:text-indigo-600 font-semibold transition-colors text-base"
+              className="text-patent-600 hover:text-indigo-600 font-semibold transition-colors text-base"
             >
               Back to sign in
             </button>
@@ -75,10 +75,10 @@ export function SignUpPage({ onToggleLogin }: SignUpPageProps) {
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-10">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-shield-600 to-indigo-600 rounded-2xl shadow-lg shadow-shield-600/20 mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-patent-600 to-indigo-600 rounded-2xl shadow-lg shadow-patent-600/20 mb-4">
               <Shield className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">IP Shield</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Git-Patent</h1>
           </div>
 
           <div className="mb-10">
@@ -113,7 +113,7 @@ export function SignUpPage({ onToggleLogin }: SignUpPageProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-shield-500 focus:border-transparent focus:bg-white transition-colors text-base"
+                  className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-patent-500 focus:border-transparent focus:bg-white transition-colors text-base"
                   required
                 />
               </div>
@@ -127,7 +127,7 @@ export function SignUpPage({ onToggleLogin }: SignUpPageProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 6 characters"
-                  className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-shield-500 focus:border-transparent focus:bg-white transition-colors text-base"
+                  className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-patent-500 focus:border-transparent focus:bg-white transition-colors text-base"
                   required
                 />
               </div>
@@ -141,7 +141,7 @@ export function SignUpPage({ onToggleLogin }: SignUpPageProps) {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm your password"
-                  className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-shield-500 focus:border-transparent focus:bg-white transition-colors text-base"
+                  className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-patent-500 focus:border-transparent focus:bg-white transition-colors text-base"
                   required
                 />
               </div>
@@ -156,7 +156,7 @@ export function SignUpPage({ onToggleLogin }: SignUpPageProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-shield-600 to-indigo-600 text-white font-semibold py-3.5 px-4 rounded-xl hover:shadow-lg hover:shadow-shield-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base"
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-patent-600 to-indigo-600 text-white font-semibold py-3.5 px-4 rounded-xl hover:shadow-lg hover:shadow-patent-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base"
             >
               {loading ? 'Creating account...' : 'Create Account'}
               {!loading && <ArrowRight className="w-4 h-4" />}
@@ -165,7 +165,7 @@ export function SignUpPage({ onToggleLogin }: SignUpPageProps) {
 
           <p className="text-center text-gray-500 text-base mt-8">
             Already have an account?{' '}
-            <button onClick={onToggleLogin} className="text-shield-600 hover:text-indigo-600 font-semibold transition-colors">
+            <button onClick={onToggleLogin} className="text-patent-600 hover:text-indigo-600 font-semibold transition-colors">
               Sign in
             </button>
           </p>
@@ -179,13 +179,13 @@ export function SignUpPage({ onToggleLogin }: SignUpPageProps) {
         <div className="absolute top-44 left-24 w-14 h-14 bg-violet-200/40 rounded-xl rotate-6" />
         <div className="absolute bottom-36 right-24 w-16 h-16 bg-indigo-200/40 rounded-full" />
         <div className="absolute bottom-52 left-16 w-10 h-10 bg-amber-200/40 rounded-lg -rotate-45" />
-        <div className="absolute top-1/3 right-1/3 w-24 h-24 bg-shield-200/30 rounded-3xl rotate-12" />
+        <div className="absolute top-1/3 right-1/3 w-24 h-24 bg-patent-200/30 rounded-3xl rotate-12" />
 
         <div className="relative z-10 text-center px-12 max-w-lg">
-          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-shield-600 to-indigo-600 rounded-3xl shadow-lg shadow-shield-600/20 mb-8">
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-patent-600 to-indigo-600 rounded-3xl shadow-lg shadow-patent-600/20 mb-8">
             <Shield className="w-12 h-12 text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">IP Shield</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Git-Patent</h1>
           <p className="text-lg text-gray-500 leading-relaxed">
             Join thousands of developers protecting their innovations. AI-powered IP analysis at your fingertips.
           </p>

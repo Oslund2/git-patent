@@ -168,7 +168,7 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
     <div className="max-w-4xl mx-auto">
       {/* Hero heading */}
       <div className="text-center mb-12">
-        <h2 className="text-3xl font-bold bg-gradient-to-r from-shield-600 via-blue-500 to-indigo-600 bg-clip-text text-transparent">
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-patent-600 via-blue-500 to-indigo-600 bg-clip-text text-transparent">
           Analyze Your Codebase
         </h2>
         <p className="text-base text-gray-500 mt-3 max-w-lg mx-auto">
@@ -226,9 +226,9 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
 
       {/* GitHub input */}
       <div className="max-w-2xl mx-auto mb-8">
-        <div className="bg-white border-2 border-shield-500 rounded-2xl p-8 shadow-md shadow-shield-500/10">
+        <div className="bg-white border-2 border-patent-500 rounded-2xl p-8 shadow-md shadow-patent-500/10">
           <div className="flex items-center gap-4 mb-5">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-shield-500 to-indigo-500">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-patent-500 to-indigo-500">
               <GitFork className="w-7 h-7 text-white" />
             </div>
             <div>
@@ -245,7 +245,7 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
                 value={repoUrl}
                 onChange={(e) => setRepoUrl(e.target.value)}
                 placeholder="https://github.com/owner/repo"
-                className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-shield-500 focus:border-transparent focus:bg-white text-gray-900 text-base transition-colors"
+                className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-patent-500 focus:border-transparent focus:bg-white text-gray-900 text-base transition-colors"
                 disabled={loading}
                 onKeyDown={(e) => e.key === 'Enter' && handleGitHubAnalysis()}
               />
@@ -262,7 +262,7 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
                     value={inventorName}
                     onChange={(e) => setInventorName(e.target.value)}
                     placeholder="Jane Smith"
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-shield-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-patent-500 focus:border-transparent"
                     disabled={loading}
                   />
                 </div>
@@ -271,7 +271,7 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
                   <select
                     value={entityStatus}
                     onChange={(e) => setEntityStatus(e.target.value as typeof entityStatus)}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-shield-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-patent-500 focus:border-transparent"
                     disabled={loading}
                   >
                     <option value="micro_entity">Micro Entity</option>
@@ -285,7 +285,7 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
                 <button
                   type="button"
                   onClick={() => setShowMoreApplicant(true)}
-                  className="text-xs text-shield-600 hover:text-shield-700 font-medium mt-2"
+                  className="text-xs text-patent-600 hover:text-patent-700 font-medium mt-2"
                   disabled={loading}
                 >
                   + Add citizenship details
@@ -298,7 +298,7 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
                     value={citizenship}
                     onChange={(e) => setCitizenship(e.target.value)}
                     placeholder="US Citizen"
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-shield-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-patent-500 focus:border-transparent"
                     disabled={loading}
                   />
                 </div>
@@ -308,7 +308,7 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
             <button
               onClick={handleGitHubAnalysis}
               disabled={loading || !repoUrl.trim()}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-shield-600 to-indigo-600 text-white font-semibold py-3.5 px-4 rounded-xl hover:shadow-lg hover:shadow-shield-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base"
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-patent-600 to-indigo-600 text-white font-semibold py-3.5 px-4 rounded-xl hover:shadow-lg hover:shadow-patent-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
               {loading ? 'Analyzing...' : 'Analyze Repository'}
@@ -333,13 +333,13 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
                       isCompleted
                         ? 'bg-green-100 text-green-600'
                         : isActive
-                          ? 'bg-gradient-to-br from-shield-500 to-indigo-500 text-white shadow-lg shadow-shield-500/20'
+                          ? 'bg-gradient-to-br from-patent-500 to-indigo-500 text-white shadow-lg shadow-patent-500/20'
                           : 'bg-gray-100 text-gray-400'
                     }`}>
                       <StepIcon className={`w-5 h-5 ${isActive && step.key !== 'complete' ? 'animate-pulse' : ''}`} />
                     </div>
                     <span className={`text-xs font-medium mt-2 ${
-                      isActive ? 'text-shield-600' : isCompleted ? 'text-green-600' : 'text-gray-400'
+                      isActive ? 'text-patent-600' : isCompleted ? 'text-green-600' : 'text-gray-400'
                     }`}>
                       {step.label}
                     </span>
@@ -364,12 +364,12 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
                   {formatElapsed(elapsed)}
                 </span>
               )}
-              <span className="text-sm font-semibold text-shield-600">{Math.round(progress.progress)}%</span>
+              <span className="text-sm font-semibold text-patent-600">{Math.round(progress.progress)}%</span>
             </div>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-2.5">
             <div
-              className="bg-gradient-to-r from-shield-500 to-indigo-500 h-2.5 rounded-full transition-all duration-500"
+              className="bg-gradient-to-r from-patent-500 to-indigo-500 h-2.5 rounded-full transition-all duration-500"
               style={{ width: `${progress.progress}%` }}
             />
           </div>

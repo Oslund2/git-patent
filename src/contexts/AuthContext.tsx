@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Check for saved guest mode
-    const savedGuest = localStorage.getItem('ip-shield-guest');
+    const savedGuest = localStorage.getItem('git-patent-guest');
     if (savedGuest === 'true') {
       setUser(createGuestUser());
       setIsGuest(true);
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     setIsGuest(false);
-    localStorage.removeItem('ip-shield-guest');
+    localStorage.removeItem('git-patent-guest');
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error as Error | null };
   };
@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGitHub = async () => {
     setIsGuest(false);
-    localStorage.removeItem('ip-shield-guest');
+    localStorage.removeItem('git-patent-guest');
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
@@ -90,14 +90,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInAsGuest = () => {
-    localStorage.setItem('ip-shield-guest', 'true');
+    localStorage.setItem('git-patent-guest', 'true');
     setUser(createGuestUser());
     setIsGuest(true);
     setSession(null);
   };
 
   const signOut = async () => {
-    localStorage.removeItem('ip-shield-guest');
+    localStorage.removeItem('git-patent-guest');
     setIsGuest(false);
     setUser(null);
     setSession(null);

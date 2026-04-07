@@ -66,7 +66,7 @@ export function AnalysisResults({ onNavigate }: AnalysisResultsProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-shield-600 border-t-transparent" />
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-patent-600 border-t-transparent" />
       </div>
     );
   }
@@ -77,7 +77,7 @@ export function AnalysisResults({ onNavigate }: AnalysisResultsProps) {
   return (
     <div className="max-w-4xl mx-auto">
       {/* Hero stats card */}
-      <div className="bg-gradient-to-r from-shield-600 via-blue-500 to-indigo-600 rounded-3xl p-10 text-white mb-10 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-patent-600 via-blue-500 to-indigo-600 rounded-3xl p-10 text-white mb-10 relative overflow-hidden">
         {/* Glass-morphism overlay shapes */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
@@ -119,16 +119,16 @@ export function AnalysisResults({ onNavigate }: AnalysisResultsProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
         <button
           onClick={onNavigate}
-          className="flex flex-col items-center gap-4 p-8 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-shield-200 transition-all group"
+          className="flex flex-col items-center gap-4 p-8 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-patent-200 transition-all group"
         >
-          <div className="w-16 h-16 bg-gradient-to-br from-shield-100 to-blue-100 rounded-2xl flex items-center justify-center group-hover:from-shield-200 group-hover:to-blue-200 transition-colors">
-            <FileText className="w-8 h-8 text-shield-700" />
+          <div className="w-16 h-16 bg-gradient-to-br from-patent-100 to-blue-100 rounded-2xl flex items-center justify-center group-hover:from-patent-200 group-hover:to-blue-200 transition-colors">
+            <FileText className="w-8 h-8 text-patent-700" />
           </div>
           <div className="text-center">
             <div className="font-semibold text-gray-900 text-lg">Patents</div>
             <div className="text-sm text-gray-500 mt-1">Generate applications</div>
           </div>
-          <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-shield-600 group-hover:translate-x-1 transition-all" />
+          <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-patent-600 group-hover:translate-x-1 transition-all" />
         </button>
 
         <button
@@ -178,7 +178,7 @@ export function AnalysisResults({ onNavigate }: AnalysisResultsProps) {
                 </div>
                 <p className="text-sm text-gray-600 mb-3 leading-relaxed">{feature.description}</p>
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-shield-50 text-shield-700 border border-shield-100">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-patent-50 text-patent-700 border border-patent-100">
                     <Code className="w-3.5 h-3.5" />
                     {TYPE_LABELS[feature.type] || feature.type}
                   </span>
@@ -195,7 +195,7 @@ export function AnalysisResults({ onNavigate }: AnalysisResultsProps) {
             </div>
             {feature.technicalDetails && (
               <details className="mt-4 group/details">
-                <summary className="text-sm text-gray-500 cursor-pointer hover:text-shield-600 font-medium transition-colors">
+                <summary className="text-sm text-gray-500 cursor-pointer hover:text-patent-600 font-medium transition-colors">
                   Technical details
                 </summary>
                 <p className="text-sm text-gray-600 mt-3 bg-slate-50 rounded-xl p-4 leading-relaxed border border-gray-100 transition-all">

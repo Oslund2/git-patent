@@ -12,7 +12,7 @@ export function addPdfAMetadata(pdf: jsPDF, title: string, author: string): void
     author: author,
     subject: 'Patent Application',
     keywords: 'patent, intellectual property, USPTO',
-    creator: 'IP Shield Patent Generator'
+    creator: 'Git-Patent Patent Generator'
   });
 }
 
