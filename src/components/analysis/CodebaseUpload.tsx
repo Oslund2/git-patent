@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { GitFork, Loader2, ArrowRight, AlertCircle, X, CheckCircle, Code, Search, Sparkles, FileText, Shield, Clock, Info, ChevronDown, ChevronUp, BookOpen } from 'lucide-react';
+import { GitFork, Loader2, ArrowRight, AlertCircle, X, CheckCircle, Code, Search, Sparkles, FileText, Shield, Clock, Info, ChevronDown, ChevronUp, BookOpen, Upload } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProject } from '../../contexts/ProjectContext';
-import { ingestFromGitHub, getLanguageBreakdown } from '../../services/analysis/codebaseIngestionService';
+import { ingestFromGitHub, ingestFromZip, getLanguageBreakdown } from '../../services/analysis/codebaseIngestionService';
 import { analyzeCodebase } from '../../services/analysis/codebaseAnalysisEngine';
 import { runFullIPAnalysis, type ApplicantInfo } from '../../services/orchestration/ipAutoOrchestrator';
 import { supabase } from '../../lib/supabase';
@@ -24,8 +24,11 @@ const STEP_CONFIG = [
 export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
   const { user, session } = useAuth();
   const { createProject, updateProject } = useProject();
+  const [sourceType, setSourceType] = useState<'github' | 'zip'>('github');
   const [showTips, setShowTips] = useState(false);
   const [repoUrl, setRepoUrl] = useState('');
+  const [zipFile, setZipFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [inventorName, setInventorName] = useState('');
   const [entityStatus, setEntityStatus] = useState<'micro_entity' | 'small_entity' | 'regular'>('micro_entity');
   const [showMoreApplicant, setShowMoreApplicant] = useState(false);
@@ -50,6 +53,85 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
     return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
   };
 
+  // Shared pipeline: store files, run AI analysis, generate IP
+  const runAnalysisPipeline = async (
+    project: { id: string; name: string },
+    files: import('../../types').CodeFile[],
+    readmeContent: string | null,
+  ) => {
+    // Check README quality and warn user
+    if (!readmeContent || readmeContent.trim().length === 0) {
+      setWarnings(prev => [...prev, 'No README found — patent output quality will be significantly reduced. Consider adding a detailed README to your repo.']);
+    } else if (readmeContent.trim().length < 200) {
+      setWarnings(prev => [...prev, 'README is very short — the tool works best with a detailed README that describes what the software does and what makes it novel.']);
+    }
+
+    // Store file records
+    setProgress({ step: 'parsing', progress: 8, message: `Parsing ${files.length} files...` });
+    getLanguageBreakdown(files);
+
+    const fileRows = files.map(f => ({
+      project_id: project.id,
+      file_path: f.path,
+      language: f.language,
+      line_count: f.lineCount,
+    }));
+    if (fileRows.length > 0) {
+      for (let i = 0; i < fileRows.length; i += 100) {
+        await supabase.from('project_files').insert(fileRows.slice(i, i + 100));
+      }
+    }
+
+    setProgress({ step: 'analyzing', progress: 10, message: 'Starting AI analysis...' });
+    await analyzeCodebase(project.id, files, setProgress, readmeContent || undefined);
+
+    // Auto-generate all IP applications
+    setProgress({ step: 'generating_patents', progress: 55, message: 'Generating patent applications...' });
+    const applicant: ApplicantInfo | undefined = inventorName.trim()
+      ? { inventorName: inventorName.trim(), entityStatus, citizenship: citizenship.trim() || undefined }
+      : undefined;
+    await runFullIPAnalysis(project.id, user!.id, project.name, (ipProgress) => {
+      const basePercent = 55;
+      const pct = basePercent + Math.round(ipProgress.overallPercent * 0.4);
+      const stepKey = ipProgress.phase === 'patents' ? 'generating_patents' : 'assessing_ip';
+      const patentLabel = ipProgress.patentTotal && ipProgress.patentTotal > 1
+        ? ` (Patent ${(ipProgress.patentIndex ?? 0) + 1}/${ipProgress.patentTotal})`
+        : '';
+      setProgress({
+        step: stepKey as AnalysisProgress['step'],
+        progress: Math.min(pct, 95),
+        message: `${ipProgress.step}${patentLabel}`,
+        detail: ipProgress.detail,
+      });
+      if (ipProgress.metrics) {
+        setMetrics(prev => {
+          const next = { ...prev };
+          const m = ipProgress.metrics!;
+          if (m.featureCount) next.features = `${m.featureCount} features`;
+          if (m.score) next.novelty = `Novelty: ${Math.round(Number(m.score))}/100`;
+          if (m.claimsCount) next.claims = `${m.claimsCount} claims`;
+          if (m.drawingsCount) next.drawings = `${m.drawingsCount} drawings`;
+          if (m.priorArtCount) next.priorArt = `${m.priorArtCount} prior art`;
+          return next;
+        });
+      }
+    }, applicant);
+
+    // Check if prior art search produced results — warn if not
+    setMetrics(prev => {
+      if (!prev.priorArt || prev.priorArt === '0 prior art') {
+        setWarnings(w => [...w, 'Prior art search returned no results — novelty scores are preliminary only. Verify prior art manually before filing.']);
+      }
+      return prev;
+    });
+
+    setProgress({
+      step: 'complete', progress: 100,
+      message: 'IP analysis complete! Patents, copyrights, and trademarks generated.',
+    });
+    setTimeout(() => onAnalysisComplete(project), 1500);
+  };
+
   const handleGitHubAnalysis = async () => {
     if (!repoUrl.trim() || !user) return;
     setError('');
@@ -66,7 +148,6 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
 
       await updateProject(project.id, { analysis_status: 'analyzing' });
 
-      // Use GitHub token from OAuth if available
       const githubToken = session?.provider_token || undefined;
 
       setProgress({ step: 'fetching', progress: 2, message: 'Fetching repository tree...' });
@@ -82,78 +163,90 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
         },
       });
 
-      // Check README quality and warn user
-      if (!readmeContent || readmeContent.trim().length === 0) {
-        setWarnings(prev => [...prev, 'No README found — patent output quality will be significantly reduced. Consider adding a detailed README to your repo.']);
-      } else if (readmeContent.trim().length < 200) {
-        setWarnings(prev => [...prev, 'README is very short — the tool works best with a detailed README that describes what the software does and what makes it novel.']);
+      await runAnalysisPipeline(project, files, readmeContent);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Analysis failed');
+      setProgress(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ZIP upload helpers
+  const validateZipFile = (file: File): string | null => {
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      return 'Please select a .zip file.';
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      return `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum is 50MB.`;
+    }
+    return null;
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const err = validateZipFile(file);
+    if (err) { setError(err); return; }
+    setError('');
+    setZipFile(file);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const err = validateZipFile(file);
+    if (err) { setError(err); return; }
+    setError('');
+    setZipFile(file);
+  };
+
+  const handleZipAnalysis = async () => {
+    if (!zipFile || !user) return;
+    setError('');
+    setWarnings([]);
+    setLoading(true);
+    setProgress({ step: 'fetching', progress: 0, message: 'Reading ZIP file...' });
+
+    try {
+      const projectName = zipFile.name.replace(/\.zip$/i, '');
+      const project = await createProject({
+        name: projectName,
+        source_type: 'zip_upload',
+      });
+      await updateProject(project.id, { analysis_status: 'analyzing' });
+
+      setProgress({ step: 'fetching', progress: 3, message: 'Extracting files from ZIP...' });
+      const { files, readmeContent } = await ingestFromZip(zipFile);
+
+      if (files.length === 0) {
+        throw new Error('No analyzable source code files found in the ZIP. Ensure it contains code files (not just config or binaries).');
       }
 
-      // Store file records
-      setProgress({ step: 'parsing', progress: 8, message: `Parsing ${files.length} files...` });
-      getLanguageBreakdown(files); // compute for analysis engine
+      setProgress({ step: 'fetching', progress: 8, message: `Found ${files.length} source files` });
 
-      const fileRows = files.map(f => ({
-        project_id: project.id,
-        file_path: f.path,
-        language: f.language,
-        line_count: f.lineCount,
-      }));
-      if (fileRows.length > 0) {
-        // Insert in batches of 100
-        for (let i = 0; i < fileRows.length; i += 100) {
-          await supabase.from('project_files').insert(fileRows.slice(i, i + 100));
-        }
-      }
-
-      setProgress({ step: 'analyzing', progress: 10, message: 'Starting AI analysis...' });
-      await analyzeCodebase(project.id, files, setProgress, readmeContent || undefined);
-
-      // Auto-generate all IP applications
-      setProgress({ step: 'generating_patents', progress: 55, message: 'Generating patent applications...' });
-      const applicant: ApplicantInfo | undefined = inventorName.trim()
-        ? { inventorName: inventorName.trim(), entityStatus, citizenship: citizenship.trim() || undefined }
-        : undefined;
-      await runFullIPAnalysis(project.id, user.id, project.name, (ipProgress) => {
-        const basePercent = 55;
-        const pct = basePercent + Math.round(ipProgress.overallPercent * 0.4);
-        const stepKey = ipProgress.phase === 'patents' ? 'generating_patents' : 'assessing_ip';
-        const patentLabel = ipProgress.patentTotal && ipProgress.patentTotal > 1
-          ? ` (Patent ${(ipProgress.patentIndex ?? 0) + 1}/${ipProgress.patentTotal})`
-          : '';
-        setProgress({
-          step: stepKey as AnalysisProgress['step'],
-          progress: Math.min(pct, 95),
-          message: `${ipProgress.step}${patentLabel}`,
-          detail: ipProgress.detail,
-        });
-        if (ipProgress.metrics) {
-          setMetrics(prev => {
-            const next = { ...prev };
-            const m = ipProgress.metrics!;
-            if (m.featureCount) next.features = `${m.featureCount} features`;
-            if (m.score) next.novelty = `Novelty: ${Math.round(Number(m.score))}/100`;
-            if (m.claimsCount) next.claims = `${m.claimsCount} claims`;
-            if (m.drawingsCount) next.drawings = `${m.drawingsCount} drawings`;
-            if (m.priorArtCount) next.priorArt = `${m.priorArtCount} prior art`;
-            return next;
-          });
-        }
-      }, applicant);
-
-      // Check if prior art search produced results — warn if not
-      setMetrics(prev => {
-        if (!prev.priorArt || prev.priorArt === '0 prior art') {
-          setWarnings(w => [...w, 'Prior art search returned no results — novelty scores are preliminary only. Verify prior art manually before filing.']);
-        }
-        return prev;
+      await updateProject(project.id, {
+        source_metadata: {
+          fileName: zipFile.name,
+          fileSize: zipFile.size,
+          fileCount: files.length,
+          readmeContent: readmeContent || undefined,
+        },
       });
 
-      setProgress({
-        step: 'complete', progress: 100,
-        message: 'IP analysis complete! Patents, copyrights, and trademarks generated.',
-      });
-      setTimeout(() => onAnalysisComplete(project), 1500);
+      await runAnalysisPipeline(project, files, readmeContent);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analysis failed');
       setProgress(null);
@@ -172,7 +265,7 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
           Analyze Your Codebase
         </h2>
         <p className="text-base text-gray-500 mt-3 max-w-lg mx-auto">
-          Point to a GitHub repository to discover patentable intellectual property
+          Point to a GitHub repository or upload a ZIP file to discover patentable intellectual property
         </p>
       </div>
 
@@ -224,7 +317,38 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
         )}
       </div>
 
+      {/* Source type toggle */}
+      {!loading && !progress && (
+        <div className="max-w-2xl mx-auto mb-4">
+          <div className="flex bg-gray-100 rounded-xl p-1">
+            <button
+              onClick={() => { setSourceType('github'); setError(''); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+                sourceType === 'github'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <GitFork className="w-4 h-4" />
+              GitHub URL
+            </button>
+            <button
+              onClick={() => { setSourceType('zip'); setError(''); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+                sourceType === 'zip'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Upload className="w-4 h-4" />
+              ZIP Upload
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* GitHub input */}
+      {sourceType === 'github' && (
       <div className="max-w-2xl mx-auto mb-8">
         <div className="bg-white border-2 border-patent-500 rounded-2xl p-8 shadow-md shadow-patent-500/10">
           <div className="flex items-center gap-4 mb-5">
@@ -316,6 +440,134 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
           </div>
         </div>
       </div>
+      )}
+
+      {/* ZIP upload */}
+      {sourceType === 'zip' && (
+      <div className="max-w-2xl mx-auto mb-8">
+        <div className="bg-white border-2 border-violet-500 rounded-2xl p-8 shadow-md shadow-violet-500/10">
+          <div className="flex items-center gap-4 mb-5">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-violet-500 to-purple-500">
+              <Upload className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">ZIP Upload</h3>
+              <p className="text-sm text-gray-500">Upload a .zip file of your codebase (max 50MB)</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {/* Drop zone */}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+                isDragging
+                  ? 'border-violet-400 bg-violet-50'
+                  : zipFile
+                    ? 'border-green-300 bg-green-50'
+                    : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+              }`}
+            >
+              {zipFile ? (
+                <div className="flex items-center justify-center gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span className="text-sm font-medium text-gray-700">{zipFile.name}</span>
+                  <span className="text-xs text-gray-400">({(zipFile.size / 1024 / 1024).toFixed(1)} MB)</span>
+                  <button
+                    onClick={() => setZipFile(null)}
+                    className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                    disabled={loading}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600 mb-1">Drag & drop your .zip file here</p>
+                  <p className="text-xs text-gray-400">or</p>
+                  <label className="inline-block mt-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-50 transition-colors">
+                    Browse files
+                    <input
+                      type="file"
+                      accept=".zip"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      disabled={loading}
+                    />
+                  </label>
+                </>
+              )}
+            </div>
+
+            {/* Applicant Information */}
+            <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/50">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Applicant Information</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Inventor Full Name *</label>
+                  <input
+                    type="text"
+                    value={inventorName}
+                    onChange={(e) => setInventorName(e.target.value)}
+                    placeholder="Jane Smith"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Entity Status</label>
+                  <select
+                    value={entityStatus}
+                    onChange={(e) => setEntityStatus(e.target.value as typeof entityStatus)}
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                    disabled={loading}
+                  >
+                    <option value="micro_entity">Micro Entity</option>
+                    <option value="small_entity">Small Entity</option>
+                    <option value="regular">Regular (Large) Entity</option>
+                  </select>
+                </div>
+              </div>
+
+              {!showMoreApplicant ? (
+                <button
+                  type="button"
+                  onClick={() => setShowMoreApplicant(true)}
+                  className="text-xs text-violet-600 hover:text-violet-700 font-medium mt-2"
+                  disabled={loading}
+                >
+                  + Add citizenship details
+                </button>
+              ) : (
+                <div className="mt-3">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Citizenship</label>
+                  <input
+                    type="text"
+                    value={citizenship}
+                    onChange={(e) => setCitizenship(e.target.value)}
+                    placeholder="US Citizen"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                    disabled={loading}
+                  />
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={handleZipAnalysis}
+              disabled={loading || !zipFile}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold py-3.5 px-4 rounded-xl hover:shadow-lg hover:shadow-violet-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base"
+            >
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
+              {loading ? 'Analyzing...' : 'Analyze Codebase'}
+            </button>
+          </div>
+        </div>
+      </div>
+      )}
 
       {/* Progress stepper */}
       {progress && (

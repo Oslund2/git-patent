@@ -69,11 +69,13 @@ function normalizeZipPath(path: string): string {
   return path;
 }
 
-async function extractFromZip(zipData: ArrayBuffer | File): Promise<CodeFile[]> {
+async function extractFromZip(zipData: ArrayBuffer | File): Promise<{ files: CodeFile[]; readmeContent: string | null }> {
   const zip = await JSZip.loadAsync(zipData);
   const files: CodeFile[] = [];
 
-  const entries = Object.entries(zip.files)
+  const allEntries = Object.entries(zip.files);
+
+  const entries = allEntries
     .filter(([, file]) => !file.dir)
     .map(([path]) => normalizeZipPath(path))
     .filter(path => path && !shouldSkipFile(path));
@@ -81,7 +83,7 @@ async function extractFromZip(zipData: ArrayBuffer | File): Promise<CodeFile[]> 
   const toProcess = entries.slice(0, MAX_FILES);
 
   for (const path of toProcess) {
-    const originalEntry = Object.entries(zip.files).find(([p]) => normalizeZipPath(p) === path);
+    const originalEntry = allEntries.find(([p]) => normalizeZipPath(p) === path);
     if (!originalEntry) continue;
 
     const [, file] = originalEntry;
@@ -104,10 +106,24 @@ async function extractFromZip(zipData: ArrayBuffer | File): Promise<CodeFile[]> 
     }
   }
 
-  return files;
+  // Extract README for patent generation context
+  let readmeContent: string | null = null;
+  const readmeEntry = allEntries.find(([path, file]) => {
+    if (file.dir) return false;
+    const normalized = normalizeZipPath(path);
+    return /^readme(\.(md|txt|rst))?$/i.test(normalized);
+  });
+  if (readmeEntry) {
+    try {
+      const raw = await readmeEntry[1].async('string');
+      readmeContent = raw.slice(0, 5000);
+    } catch { /* README is optional */ }
+  }
+
+  return { files, readmeContent };
 }
 
-export async function ingestFromZip(file: File): Promise<CodeFile[]> {
+export async function ingestFromZip(file: File): Promise<{ files: CodeFile[]; readmeContent: string | null }> {
   if (file.size > MAX_ZIP_SIZE) {
     throw new Error(`Zip file too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum is 50MB.`);
   }
