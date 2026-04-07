@@ -63,13 +63,13 @@ export function PatentExportTab({ application, onExportPDF, onExportUSPTOPdf, on
   const sortedClaims = [...application.claims].sort((a, b) => a.claim_number - b.claim_number);
 
   const completenessItems = [
-    { label: 'Title', complete: true, detail: application.title },
-    { label: 'Inventor', complete: !!application.inventor_name, detail: application.inventor_name || 'Not specified' },
-    { label: 'Citizenship', complete: true, detail: application.inventor_citizenship },
-    { label: 'Abstract', complete: !!application.abstract, detail: `${countWords(application.abstract || '')} words` },
-    { label: 'Specification', complete: !!application.specification, detail: `${countWords(application.specification || '').toLocaleString()} words` },
-    { label: 'Claims', complete: application.claims.length > 0, detail: `${application.claims.length} total` },
-    { label: 'Drawings', complete: application.drawings.length > 0, detail: `${application.drawings.length} figures` },
+    { label: 'Title', complete: true, detail: application.title, tip: '' },
+    { label: 'Inventor', complete: !!application.inventor_name, detail: application.inventor_name || 'Not specified', tip: 'Go to the Applicant tab to add inventor details' },
+    { label: 'Citizenship', complete: true, detail: application.inventor_citizenship, tip: '' },
+    { label: 'Abstract', complete: !!application.abstract && countWords(application.abstract) > 20, detail: `${countWords(application.abstract || '')} words`, tip: 'Go to the Abstract tab — aim for 150 words (USPTO max)' },
+    { label: 'Specification', complete: !!application.specification && countWords(application.specification || '') > 100, detail: `${countWords(application.specification || '').toLocaleString()} words`, tip: 'Go to the Specification tab to generate or edit — aim for 1,000+ words' },
+    { label: 'Claims', complete: application.claims.length > 0, detail: `${application.claims.length} total`, tip: 'Go to the Claims tab and click Generate to create patent claims' },
+    { label: 'Drawings', complete: application.drawings.length > 0, detail: `${application.drawings.length} figures`, tip: 'Go to the Drawings tab to generate technical diagrams' },
   ];
 
   const completenessPercent = Math.round((completenessItems.filter(i => i.complete).length / completenessItems.length) * 100);
@@ -269,18 +269,23 @@ export function PatentExportTab({ application, onExportPDF, onExportUSPTOPdf, on
         </div>
         <div className="space-y-2.5">
           {completenessItems.map((item, i) => (
-            <div key={i} className={`flex items-center gap-3 p-3 rounded-xl ${item.complete ? 'bg-emerald-50/50' : 'bg-amber-50/50'}`}>
-              {item.complete ? (
-                <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                </div>
-              ) : (
-                <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                  <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
-                </div>
+            <div key={i} className={`p-3 rounded-xl ${item.complete ? 'bg-emerald-50/50' : 'bg-amber-50/50'}`}>
+              <div className="flex items-center gap-3">
+                {item.complete ? (
+                  <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+                ) : (
+                  <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                  </div>
+                )}
+                <span className={`text-sm font-medium ${item.complete ? 'text-gray-700' : 'text-gray-500'}`}>{item.label}</span>
+                <span className="text-xs text-gray-400 ml-auto">{item.detail}</span>
+              </div>
+              {!item.complete && item.tip && (
+                <p className="text-xs text-amber-600/80 mt-1.5 ml-9">{item.tip}</p>
               )}
-              <span className={`text-sm font-medium ${item.complete ? 'text-gray-700' : 'text-gray-500'}`}>{item.label}</span>
-              <span className="text-xs text-gray-400 ml-auto">{item.detail}</span>
             </div>
           ))}
         </div>

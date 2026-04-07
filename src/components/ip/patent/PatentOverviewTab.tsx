@@ -8,7 +8,13 @@ import {
   AlertTriangle,
   Sparkles,
   Award,
-  Lightbulb
+  Lightbulb,
+  ArrowRight,
+  AlertCircle,
+  FileText,
+  List,
+  Image,
+  BookOpen
 } from 'lucide-react';
 import {
   countWords,
@@ -137,6 +143,63 @@ export function PatentOverviewTab({ application, onUpdate, onDelete, onNavigate 
           )}
         </div>
       </div>
+
+      {/* Next Steps Guidance — shown when application is incomplete */}
+      {application.status === 'draft' && (() => {
+        const steps: { label: string; done: boolean; tab: string; icon: React.ElementType; tip: string }[] = [
+          { label: 'Specification', done: !!application.specification && countWords(application.specification) > 100, tab: 'specification', icon: FileText, tip: 'Technical description of your invention (aim for 1,000+ words)' },
+          { label: 'Claims', done: application.claims.length > 0, tab: 'claims', icon: List, tip: 'Independent and dependent claims define your patent protection scope' },
+          { label: 'Abstract', done: !!application.abstract && countWords(application.abstract) > 20, tab: 'abstract', icon: BookOpen, tip: 'Concise 150-word summary required by USPTO' },
+          { label: 'Drawings', done: application.drawings.length > 0, tab: 'drawings', icon: Image, tip: 'Technical diagrams illustrating your invention\'s architecture' },
+          { label: 'Inventor Info', done: application.inventors?.length > 0 && application.inventors.some(i => i.fullName && i.residence?.city), tab: 'applicant', icon: Lightbulb, tip: 'Full legal names and residences of all inventors' },
+        ];
+        const incomplete = steps.filter(s => !s.done);
+        const complete = steps.filter(s => s.done);
+        if (incomplete.length === 0) return null;
+        const nextStep = incomplete[0];
+        return (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-5">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold text-blue-900">
+                  {complete.length} of {steps.length} sections complete — {incomplete.length} need attention
+                </h3>
+                <p className="text-xs text-blue-700/70 mt-1">
+                  Complete all sections to prepare your application for filing. Sections can be AI-generated or edited manually.
+                </p>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {steps.map(step => {
+                    const StepIcon = step.icon;
+                    return (
+                      <button
+                        key={step.label}
+                        onClick={() => onNavigate(step.tab)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          step.done
+                            ? 'bg-emerald-100/80 text-emerald-700 hover:bg-emerald-100'
+                            : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50 hover:shadow-sm'
+                        }`}
+                        title={step.tip}
+                      >
+                        {step.done ? (
+                          <CheckCircle className="w-3 h-3" />
+                        ) : (
+                          <StepIcon className="w-3 h-3" />
+                        )}
+                        {step.label}
+                        {!step.done && step === nextStep && <ArrowRight className="w-3 h-3" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Application Details */}
