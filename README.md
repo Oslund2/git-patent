@@ -1,73 +1,193 @@
-# React + TypeScript + Vite
+# Git-Patent
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+AI-powered intellectual property protection platform that analyzes codebases and generates patent applications, copyright registrations, and trademark filings — from source code to USPTO-ready documents.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### Codebase Analysis
+- **GitHub integration** — paste a repo URL to fetch and analyze source code via the GitHub API
+- **ZIP upload** — drag-and-drop a ZIP archive of your project
+- **AI-powered feature extraction** — identifies algorithms, data structures, integrations, UI patterns, optimizations, architecture, API design, and security mechanisms
+- **Novelty assessment** — rates each feature as strong, moderate, or weak for patentability
+- **Batch processing** — analyzes up to ~40 files in batches of 8
 
-## React Compiler
+### Patent Application Generation
+- **Full specification authoring** — Field of Invention, Background, Summary, Detailed Description, and Abstract sections generated via AI
+- **Claims generation** — independent claims (method, system, computer-readable medium) and 8-15 dependent claims following USPTO requirements
+- **Patent drawings** — system architecture diagrams, algorithm flowcharts, data structure diagrams, integration diagrams, workflow diagrams, UI wireframes, and block diagrams in print-optimized SVG
+- **Prior art search** — two-phase search using the Serper API (Google Patents) followed by AI relevance analysis, similarity scoring, and blocking risk assessment
+- **Novelty analysis** — overall novelty score (0-100), feature-by-feature breakdown, approval probability estimation, and recommendations
+- **Differentiation analysis** — points of novelty, technical advantages, feature comparison matrix, design-around strategies, and non-obviousness arguments
+- **CPC classification** — AI-suggested Cooperative Patent Classification codes with confidence scores
+- **USPTO forms** — SB-16 Provisional Cover Sheet, Application Data Sheet (ADS), declaration forms, and micro-entity certification
+- **Filing fee calculator** — 2024 USPTO rates for provisional, non-provisional, continuation, CIP, and divisional filings with regular/small/micro-entity discounts and excess claims fees
+- **Filing types** — provisional, non-provisional, continuation, continuation-in-part (CIP), and divisional applications
+- **PDF export** — generate patent documents with jsPDF
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Copyright Registration
+- **Registration types** — source code, module, library, application, collection
+- **Work types** — literary work, compilation, audiovisual, sound recording
+- **AI authorship disclosure** — track AI contribution percentage, tools used, and human authorship statements
+- **Author types** — individual, work-for-hire, joint, collective, anonymous, pseudonymous
+- **Bulk registration** — batch registration for multiple works
+- **International support** — international copyright registration
 
-## Expanding the ESLint configuration
+### Trademark Filing
+- **Mark types** — word mark, design mark, combined mark, sound mark, motion mark
+- **Filing basis** — use in commerce, intent to use, foreign registration, foreign application
+- **International classes** — WIPO classification support
+- **Specimen management** — product labels, packaging, website screenshots, advertisements, brochures
+- **Full lifecycle tracking** — draft through registered/abandoned status
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### One-Click IP Generation
+The auto-orchestrator clusters your codebase features into patentable innovations and generates patent applications, copyright registrations, and trademark filings in a single pipeline with progress reporting.
+
+### Embeddable Widget
+Git-Patent ships as both a standalone app and an embeddable React component:
 
 ```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+import { GitPatentWidget } from 'git-patent';
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+<GitPatentWidget
+  supabaseUrl="..."
+  supabaseAnonKey="..."
+  geminiApiKey="..."
+  userId="..."
+  theme="light"
+  initialView="projects"
+  onPatentGenerated={(patent) => {}}
+  onAnalysisComplete={(project) => {}}
+/>
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Build with `npm run build:lib` — outputs `dist-lib/git-patent.es.js`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Tech Stack
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19, TypeScript 5.9, Tailwind CSS 3.4 |
+| Build | Vite 8, PostCSS, Autoprefixer |
+| Backend | Supabase (PostgreSQL, Auth, RLS) |
+| AI | Anthropic Claude API (`claude-sonnet-4-20250514`) |
+| Patent Search | Serper.dev (Google Patents API) |
+| Code Ingestion | GitHub REST API |
+| PDF Generation | jsPDF |
+| ZIP Handling | JSZip |
+| Icons | Lucide React |
+| Hosting | Netlify (SPA + serverless functions) |
+
+## API Integrations
+
+### Anthropic Claude API
+Core AI engine powering all generation tasks — specifications, claims, novelty analysis, feature extraction, CPC classification, and more. Feature-specific token limits range from 2,048 to 8,192.
+
+- **Env var:** `VITE_ANTHROPIC_API_KEY`
+
+### Serper.dev (Google Patents)
+Real patent prior art search via the `search-patents` Netlify function. Returns patent numbers, titles, snippets, filing dates, inventors, assignees, and thumbnails.
+
+- **Endpoint:** `https://google.serper.dev/patents`
+- **Env var:** `SERPER_API_KEY` (set in Netlify environment)
+
+### GitHub API
+Fetches repository metadata, file trees, and file contents for codebase analysis. Supports multiple URL formats and authenticated access for higher rate limits.
+
+### Supabase
+PostgreSQL database with Row-Level Security for all user data — projects, patent applications, claims, drawings, prior art results, novelty analyses, copyright registrations, and trademark applications.
+
+- **Env vars:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+
+## Getting Started
+
+### Prerequisites
+- Node.js 18+
+- A Supabase project
+- An Anthropic API key
+- A Serper.dev API key (for prior art search)
+
+### Setup
+
+```bash
+git clone https://github.com/Oslund2/git-patent.git
+cd git-patent
+npm install
+cp .env.example .env
 ```
+
+Add your keys to `.env`:
+
+```
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_ANTHROPIC_API_KEY=your-anthropic-key
+```
+
+Set `SERPER_API_KEY` in your Netlify environment (used by the `search-patents` serverless function).
+
+### Database
+
+Apply the migration to your Supabase project:
+
+```bash
+supabase db push
+```
+
+Or run `supabase/migrations/001_initial_schema.sql` directly in the Supabase SQL editor. This creates all tables with RLS policies.
+
+### Development
+
+```bash
+npm run dev
+```
+
+### Build
+
+```bash
+# Standalone app
+npm run build
+
+# Embeddable library
+npm run build:lib
+```
+
+### Deploy
+
+Deploys to Netlify out of the box — `netlify.toml` is preconfigured with the build command, publish directory, functions directory, and SPA redirect rules.
+
+## Project Structure
+
+```
+src/
+  components/
+    analysis/        # CodebaseUpload, ProjectList, AnalysisResults
+    auth/            # LoginPage, SignUpPage
+    embed/           # GitPatentWidget (embeddable)
+    ip/              # IPDashboard, PatentApplication, CopyrightApplication, TrademarkApplication
+      patent/        # 11 patent tabs (Overview, Abstract, Specification, Claims, Drawings, PriorArt, Analysis, LegalBrief, Filing, Applicant, Export, SB16FormWizard)
+    results/         # IPAnalysisDashboard, PatentDocumentViewer, FilingGuide
+  contexts/          # AuthContext, ProjectContext
+  services/
+    ai/              # geminiService, promptResolver, aiRequestService
+    analysis/        # codebaseAnalysisEngine, codebaseIngestionService, githubService
+    copyright/       # copyrightApplicationService, aiAuthorshipService, bulkCopyrightRegistration, internationalCopyright
+    orchestration/   # ipAutoOrchestrator (one-click IP generation)
+    patent/          # 20+ services: claims, specification, drawings, prior art, novelty, differentiation, CPC classification, USPTO forms, fee calculation, workflow orchestration
+    trademark/       # trademarkApplicationService
+  lib/               # supabase client, database types
+  types/             # TypeScript type definitions
+netlify/
+  functions/         # search-patents (Serper proxy)
+supabase/
+  migrations/        # 001_initial_schema.sql
+```
+
+## Authentication
+
+- **Email/password** — standard Supabase auth
+- **GitHub OAuth** — sign in with GitHub
+- **Guest mode** — explore the app without an account (uses a stable guest user ID)
+
+## License
+
+Private
