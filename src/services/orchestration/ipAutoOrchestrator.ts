@@ -79,17 +79,17 @@ async function clusterFeatures(
     ? `\nPROJECT README (use this to understand what the software actually does and name clusters accordingly):\n${readmeContent.substring(0, 3000)}\n`
     : '';
 
-  const prompt = `You are an IP strategist. Given the following extracted software features, group them into 1-3 patentable innovation clusters. Each cluster should combine closely related features that together form a single patentable invention.
+  const prompt = `You are an IP strategist. Given the following extracted software features, combine ALL of them into a single comprehensive patentable invention. The patent should cover the entire system as one unified invention.
 ${readmeSection}
 FEATURES:
 ${featureList}
 
-Respond ONLY with a JSON array (no extra text):
+Respond ONLY with a JSON array containing exactly ONE cluster (no extra text):
 [
   {
-    "title": "Patent-worthy title for the cluster",
-    "description": "2-3 sentence invention description combining the grouped features",
-    "featureNames": ["Feature Name 1", "Feature Name 2"],
+    "title": "Patent-worthy title covering the full system",
+    "description": "2-3 sentence invention description combining ALL the features into one cohesive invention",
+    "featureNames": [list ALL feature names here],
     "technicalField": "e.g. Distributed Systems, Machine Learning, Data Processing"
   }
 ]`;

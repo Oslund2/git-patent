@@ -271,13 +271,22 @@ Respond with ONLY the JSON object.`;
   };
 
   const handleDeleteApplication = async () => {
-    if (!selectedApp) return;
+    if (!selectedApp || !user || !projectId) return;
     setSaving(true);
     try {
-      await deletePatentApplication(selectedApp.id);
-      setSelectedApp(null);
+      const deletedId = selectedApp.id;
+      await deletePatentApplication(deletedId);
       setShowDeleteModal(false);
-      await loadApplications();
+      // Refresh the list and select the next available app
+      const apps = await getPatentApplications(projectId, user.id);
+      setApplications(apps);
+      if (apps.length > 0) {
+        const nextApp = apps.find(a => a.id !== deletedId) || apps[0];
+        const full = await getPatentApplication(nextApp.id, user.id);
+        setSelectedApp(full);
+      } else {
+        setSelectedApp(null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete application');
     } finally {
