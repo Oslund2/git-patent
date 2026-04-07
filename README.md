@@ -1,6 +1,12 @@
 # Git-Patent
 
-AI-powered intellectual property protection platform that analyzes codebases and generates patent applications, copyright registrations, and trademark filings — from source code to USPTO-ready documents.
+Most software never gets patented — not because it isn't novel, but because the process is expensive, slow, and opaque. Developers build genuinely inventive systems every day, ship them to production, and move on. Meanwhile, the innovations buried in that code go unprotected.
+
+Git-Patent changes that. Point it at a GitHub repo or upload a ZIP of your source code, and it does the rest. The platform uses AI to read your codebase the way a patent attorney would — identifying novel algorithms, unique architectural patterns, and inventive data structures that qualify for IP protection. It then generates complete, USPTO-ready patent applications: specifications written in proper patent language, independent and dependent claims, technical drawings, prior art searches against real patents, novelty analysis, CPC classifications, and all the filing forms.
+
+It handles copyrights and trademarks too. One click can take an entire codebase from raw source to a portfolio of IP filings.
+
+The goal is simple: if you wrote something worth protecting, the paperwork shouldn't be the reason you don't.
 
 ## Features
 
