@@ -33,17 +33,19 @@ export function PatentClaimsTab({ claims, generating, onGenerate }: PatentClaims
             <p className="text-xs text-gray-500 mt-0.5">Define the scope of patent protection</p>
           </div>
         </div>
-        <button
-          onClick={onGenerate}
-          disabled={generating}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition-all shadow-md shadow-blue-200 hover:shadow-lg"
-        >
-          {generating ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
-          ) : (
-            <><Sparkles className="w-4 h-4" /> Generate Claims</>
-          )}
-        </button>
+        {claims.length > 0 && (
+          <button
+            onClick={onGenerate}
+            disabled={generating}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition-all shadow-md shadow-blue-200 hover:shadow-lg"
+          >
+            {generating ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
+            ) : (
+              <><Sparkles className="w-4 h-4" /> Regenerate Claims</>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Claims Count Summary */}
