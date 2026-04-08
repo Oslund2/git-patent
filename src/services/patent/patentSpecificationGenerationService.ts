@@ -1,6 +1,36 @@
 import { generateText } from '../ai/geminiService';
 import { supabase } from '../../lib/supabase';
 
+/** Retry an AI generation call with exponential backoff */
+async function generateTextWithRetry(
+  prompt: string,
+  featureArea: string,
+  maxRetries = 3
+): Promise<string> {
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await generateText(prompt, featureArea);
+      return result;
+    } catch (err: any) {
+      lastError = err;
+      const isRateLimit = err.message?.includes('429') || err.message?.toLowerCase().includes('rate limit');
+      const isTimeout = err.message?.includes('timed out') || err.name === 'AbortError';
+      if (attempt < maxRetries && (isRateLimit || isTimeout)) {
+        const delay = isRateLimit ? 5000 * attempt : 2000 * attempt;
+        console.warn(`[AI] ${featureArea} attempt ${attempt} failed (${isRateLimit ? 'rate limit' : 'timeout'}), retrying in ${delay}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+      } else if (attempt < maxRetries) {
+        const delay = 1000 * attempt;
+        console.warn(`[AI] ${featureArea} attempt ${attempt} failed: ${err.message}, retrying in ${delay}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+  }
+  console.error(`[AI] ${featureArea} failed after ${maxRetries} attempts:`, lastError?.message);
+  return '';
+}
+
 /**
  * Trim text to the last complete sentence within a word limit.
  * Splits on sentence-ending punctuation (.!?) and keeps as many
@@ -455,10 +485,15 @@ export async function generateIntelligentSpecification(
     ? generateBriefDescriptionOfDrawings(drawings)
     : '';
 
+  // Small delays between sequential AI calls to avoid rate limiting
   const field = await generateFieldSection(title, features, enrichedContext, projectId, referenceContext);
+  await new Promise(r => setTimeout(r, 1000));
   const background = await generateBackgroundSection(priorArt, differentiationReports, enrichedContext, projectId, referenceContext);
+  await new Promise(r => setTimeout(r, 1000));
   const summary = await generateSummarySection(title, features, differentiationReports, enrichedContext, projectId, referenceContext);
+  await new Promise(r => setTimeout(r, 1000));
   const detailedDescription = await generateDetailedDescriptionSection(title, features, enrichedContext, projectId, referenceContext, drawings);
+  await new Promise(r => setTimeout(r, 1000));
   const abstract = await generateAbstractSection(title, features, enrichedContext, projectId);
 
   return {
@@ -497,7 +532,7 @@ async function generateFieldSection(
 
     const prompt = buildFieldOfInventionPrompt(promptVars);
 
-    const response = await generateText(prompt, 'patent_specification_field');
+    const response = await generateTextWithRetry(prompt, 'patent_specification_field');
     return response.trim();
   } catch (error) {
     console.error('Field section generation failed:', error);
@@ -536,7 +571,7 @@ async function generateBackgroundSection(
 
     const prompt = buildBackgroundPrompt(promptVars);
 
-    const response = await generateText(prompt, 'patent_specification_background');
+    const response = await generateTextWithRetry(prompt, 'patent_specification_background');
     return response.trim();
   } catch (error) {
     console.error('Background section generation failed:', error);
@@ -578,7 +613,7 @@ async function generateSummarySection(
 
     const prompt = buildSummaryPrompt(promptVars);
 
-    const response = await generateText(prompt, 'patent_specification_summary');
+    const response = await generateTextWithRetry(prompt, 'patent_specification_summary');
     return response.trim();
   } catch (error) {
     console.error('Summary section generation failed:', error);
@@ -614,7 +649,7 @@ async function generateDetailedDescriptionChunk(
 
     const prompt = buildDetailedDescriptionPrompt(promptVars);
 
-    const response = await generateText(prompt, 'patent_specification_detailed');
+    const response = await generateTextWithRetry(prompt, 'patent_specification_detailed');
     return response.trim();
   } catch (error) {
     console.error(`Detailed description chunk (${chunkType}) generation failed:`, error);
@@ -686,7 +721,7 @@ async function generateAbstractSection(
       inventionDescription: inventionContext?.description || ''
     });
 
-    const response = await generateText(prompt, 'patent_abstract_generation');
+    const response = await generateTextWithRetry(prompt, 'patent_abstract_generation');
     return trimToCompleteSentences(response.trim(), 150);
   } catch (error) {
     console.error('Abstract section generation failed:', error);
