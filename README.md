@@ -48,6 +48,13 @@ The goal is simple: if you wrote something worth protecting, the paperwork shoul
 ### One-Click IP Generation
 The auto-orchestrator clusters your codebase features into patentable innovations and generates patent applications, copyright registrations, and trademark filings in a single pipeline with progress reporting.
 
+### Payments & Access Control
+- **Internal user bypass** — employees at configured email domains get free, unlimited access
+- **Stripe Checkout** — external users pay a one-time fee per project via Stripe-hosted checkout
+- **Webhook-driven** — payment confirmation is handled server-side via Stripe webhooks with signature verification
+- **Audit trail** — every payment is logged in a `payments` table with Stripe session and payment intent IDs
+- **Test mode** — full demo flow using Stripe test keys and test card numbers (no real charges)
+
 ### Embeddable Widget
 Git-Patent ships as both a standalone app and an embeddable React component:
 
@@ -78,6 +85,7 @@ Build with `npm run build:lib` — outputs `dist-lib/git-patent.es.js`.
 | AI | Anthropic Claude API (`claude-sonnet-4-20250514`) |
 | Patent Search | Serper.dev (Google Patents API) |
 | Code Ingestion | GitHub REST API |
+| Payments | Stripe (Checkout Sessions, Webhooks) |
 | PDF Generation | jsPDF |
 | ZIP Handling | JSZip |
 | Icons | Lucide React |
@@ -100,9 +108,16 @@ Real patent prior art search via the `search-patents` Netlify function. Returns 
 Fetches repository metadata, file trees, and file contents for codebase analysis. Supports multiple URL formats and authenticated access for higher rate limits.
 
 ### Supabase
-PostgreSQL database with Row-Level Security for all user data — projects, patent applications, claims, drawings, prior art results, novelty analyses, copyright registrations, and trademark applications.
+PostgreSQL database with Row-Level Security for all user data — projects, patent applications, claims, drawings, prior art results, novelty analyses, copyright registrations, trademark applications, and payment records.
 
 - **Env vars:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+- **Server-side:** `SUPABASE_SERVICE_ROLE_KEY` (set in Netlify env, used by webhook function)
+
+### Stripe
+One-time payments via Checkout Sessions. Internal users (configurable email domain allowlist) bypass payment entirely. Webhooks confirm payment and update project status.
+
+- **Env vars (Netlify):** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`
+- **Env vars (client):** `VITE_STRIPE_PUBLISHABLE_KEY`, `VITE_INTERNAL_DOMAINS`
 
 ## Getting Started
 
@@ -127,9 +142,19 @@ Add your keys to `.env`:
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 VITE_ANTHROPIC_API_KEY=your-anthropic-key
+VITE_INTERNAL_DOMAINS=yourcompany.com
 ```
 
-Set `SERPER_API_KEY` in your Netlify environment (used by the `search-patents` serverless function).
+Set these in your **Netlify environment variables** (not in `.env` — they are server-side only):
+
+```
+SERPER_API_KEY=...              # Prior art search (Serper.dev)
+STRIPE_SECRET_KEY=sk_test_...  # Stripe API secret key
+STRIPE_WEBHOOK_SECRET=whsec_...# Stripe webhook signing secret
+STRIPE_PRICE_ID=price_...      # Stripe Price ID for the product
+SUPABASE_SERVICE_ROLE_KEY=...  # Supabase service role key (for webhook)
+INTERNAL_DOMAINS=yourcompany.com  # Free access email domains
+```
 
 ### Database
 
@@ -139,7 +164,9 @@ Apply the migration to your Supabase project:
 supabase db push
 ```
 
-Or run `supabase/migrations/001_initial_schema.sql` directly in the Supabase SQL editor. This creates all tables with RLS policies.
+Or run the migration files directly in the Supabase SQL editor:
+1. `supabase/migrations/001_initial_schema.sql` — core tables with RLS policies
+2. `supabase/migrations/002_add_payments.sql` — payment tracking tables and indexes
 
 ### Development
 
@@ -171,8 +198,10 @@ src/
     embed/           # GitPatentWidget (embeddable)
     ip/              # IPDashboard, PatentApplication, CopyrightApplication, TrademarkApplication
       patent/        # 11 patent tabs (Overview, Abstract, Specification, Claims, Drawings, PriorArt, Analysis, LegalBrief, Filing, Applicant, Export, SB16FormWizard)
+    payment/         # PaymentGate, PaymentBanner (Stripe integration)
     results/         # IPAnalysisDashboard, PatentDocumentViewer, FilingGuide
   contexts/          # AuthContext, ProjectContext
+  hooks/             # usePaymentGate (Stripe payment flow)
   services/
     ai/              # geminiService, promptResolver, aiRequestService
     analysis/        # codebaseAnalysisEngine, codebaseIngestionService, githubService
@@ -183,9 +212,9 @@ src/
   lib/               # supabase client, database types
   types/             # TypeScript type definitions
 netlify/
-  functions/         # search-patents (Serper proxy)
+  functions/         # search-patents, create-checkout, stripe-webhook, check-payment
 supabase/
-  migrations/        # 001_initial_schema.sql
+  migrations/        # 001_initial_schema.sql, 002_add_payments.sql
 ```
 
 ## Authentication
