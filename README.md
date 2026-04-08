@@ -4,8 +4,6 @@ Most software never gets patented — not because it isn't novel, but because th
 
 Git-Patent changes that. Point it at a GitHub repo or upload a ZIP of your source code, and it does the rest. The platform uses AI to read your codebase the way a patent attorney would — identifying novel algorithms, unique architectural patterns, and inventive data structures that qualify for IP protection. It then generates complete, USPTO-ready patent applications: specifications written in proper patent language, independent and dependent claims, technical drawings, prior art searches against real patents, novelty analysis, CPC classifications, and all the filing forms.
 
-It handles copyrights and trademarks too. One click can take an entire codebase from raw source to a portfolio of IP filings.
-
 The goal is simple: if you wrote something worth protecting, the paperwork shouldn't be the reason you don't.
 
 ## Features
@@ -30,30 +28,21 @@ The goal is simple: if you wrote something worth protecting, the paperwork shoul
 - **Filing types** — provisional, non-provisional, continuation, continuation-in-part (CIP), and divisional applications
 - **PDF export** — generate patent documents with jsPDF
 
-### Copyright Registration
-- **Registration types** — source code, module, library, application, collection
-- **Work types** — literary work, compilation, audiovisual, sound recording
-- **AI authorship disclosure** — track AI contribution percentage, tools used, and human authorship statements
-- **Author types** — individual, work-for-hire, joint, collective, anonymous, pseudonymous
-- **Bulk registration** — batch registration for multiple works
-- **International support** — international copyright registration
+### One-Click Patent Generation
+The auto-orchestrator clusters your codebase features into patentable innovations and generates complete patent applications in a single pipeline with real-time progress reporting.
 
-### Trademark Filing
-- **Mark types** — word mark, design mark, combined mark, sound mark, motion mark
-- **Filing basis** — use in commerce, intent to use, foreign registration, foreign application
-- **International classes** — WIPO classification support
-- **Specimen management** — product labels, packaging, website screenshots, advertisements, brochures
-- **Full lifecycle tracking** — draft through registered/abandoned status
-
-### One-Click IP Generation
-The auto-orchestrator clusters your codebase features into patentable innovations and generates patent applications, copyright registrations, and trademark filings in a single pipeline with progress reporting.
-
-### Payments & Access Control
-- **Internal user bypass** — employees at configured email domains get free, unlimited access
-- **Stripe Checkout** — external users pay a one-time fee per project via Stripe-hosted checkout
+### Authentication & Payments
+- **Sign-in required** — all users must create an account (email/password via Supabase Auth)
+- **Internal user bypass** — `@scripps.com` employees get free, unlimited access (configurable domain allowlist)
+- **Stripe Checkout** — external users pay a one-time $49 fee per project via Stripe-hosted checkout
 - **Webhook-driven** — payment confirmation is handled server-side via Stripe webhooks with signature verification
 - **Audit trail** — every payment is logged in a `payments` table with Stripe session and payment intent IDs
-- **Test mode** — full demo flow using Stripe test keys and test card numbers (no real charges)
+- **Post-payment flow** — after Stripe checkout, users return to the app and proceed directly to analysis without re-payment
+
+### Terms of Service
+- Built-in TOS page accessible from every screen (footer link on all pages, consent notice on login/signup)
+- AI-generated content disclaimer, hold-harmless/indemnification, limitation of liability, warranty disclaimer
+- Users are advised to consult a licensed patent attorney before filing
 
 ### Embeddable Widget
 Git-Patent ships as both a standalone app and an embeddable React component:
@@ -105,7 +94,9 @@ Real patent prior art search via the `search-patents` Netlify function. Returns 
 - **Env var:** `SERPER_API_KEY` (set in Netlify environment)
 
 ### GitHub API
-Fetches repository metadata, file trees, and file contents for codebase analysis. Supports multiple URL formats and authenticated access for higher rate limits.
+Fetches repository metadata, file trees, and file contents for codebase analysis. Supports multiple URL formats. Authenticated via `VITE_GITHUB_TOKEN` for 5,000 requests/hour (vs 60/hour unauthenticated).
+
+- **Env var:** `VITE_GITHUB_TOKEN` (GitHub Personal Access Token, public repo read access)
 
 ### Supabase
 PostgreSQL database with Row-Level Security for all user data — projects, patent applications, claims, drawings, prior art results, novelty analyses, copyright registrations, trademark applications, and payment records.
@@ -143,6 +134,7 @@ VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 VITE_ANTHROPIC_API_KEY=your-anthropic-key
 VITE_INTERNAL_DOMAINS=yourcompany.com
+VITE_GITHUB_TOKEN=ghp_...      # GitHub PAT for higher API rate limits (optional but recommended)
 ```
 
 Set these in your **Netlify environment variables** (not in `.env` — they are server-side only):
@@ -195,6 +187,7 @@ src/
   components/
     analysis/        # CodebaseUpload, ProjectList, AnalysisResults
     auth/            # LoginPage, SignUpPage
+    legal/           # TermsOfService
     embed/           # GitPatentWidget (embeddable)
     ip/              # IPDashboard, PatentApplication, CopyrightApplication, TrademarkApplication
       patent/        # 11 patent tabs (Overview, Abstract, Specification, Claims, Drawings, PriorArt, Analysis, LegalBrief, Filing, Applicant, Export, SB16FormWizard)
@@ -219,9 +212,9 @@ supabase/
 
 ## Authentication
 
-- **Email/password** — standard Supabase auth
-- **GitHub OAuth** — sign in with GitHub
-- **Guest mode** — explore the app without an account (uses a stable guest user ID)
+- **Email/password** — standard Supabase auth (required for all users)
+- **Internal domains** — `@scripps.com` users get free access; configurable via `VITE_INTERNAL_DOMAINS`
+- **External users** — must pay via Stripe before running the analysis pipeline
 
 ## License
 
