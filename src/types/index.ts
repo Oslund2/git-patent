@@ -78,6 +78,21 @@ export interface Project {
   analysis_status: 'pending' | 'analyzing' | 'completed' | 'failed';
   analysis_summary: string | null;
   analysis_completed_at: string | null;
+  payment_status: 'not_required' | 'pending' | 'paid';
+  stripe_session_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Payment {
+  id: string;
+  user_id: string;
+  project_id: string;
+  stripe_session_id: string;
+  stripe_payment_intent_id: string | null;
+  amount_cents: number;
+  currency: string;
+  status: 'pending' | 'completed' | 'refunded' | 'failed';
+  created_at: string;
+  completed_at: string | null;
 }

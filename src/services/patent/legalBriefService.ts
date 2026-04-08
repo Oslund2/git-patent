@@ -514,18 +514,19 @@ export function generateLegalBriefPDF(data: LegalBriefData): jsPDF {
   const critCount = risks.filter(r => r.severity === 'Critical').length;
   const highCount = risks.filter(r => r.severity === 'High').length;
 
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.text('FILING READINESS SUMMARY', PW / 2, y, { align: 'center' });
-  y += 20;
+  y += 30;
 
-  doc.setFontSize(28);
+  doc.setFontSize(32);
   doc.setFont('helvetica', 'bold');
   const readinessColor = readiness >= 80 ? [22, 163, 74] : readiness >= 50 ? [217, 119, 6] : [220, 38, 38];
   doc.setTextColor(readinessColor[0], readinessColor[1], readinessColor[2]);
   doc.text(`${readiness}%`, PW / 2, y, { align: 'center' });
-  y += 14;
-  doc.setFontSize(8);
+  y += 18;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
   doc.text('Compliance Score', PW / 2, y, { align: 'center' });
   doc.setTextColor(0, 0, 0);
   y += 20;
@@ -722,11 +723,12 @@ export function generateLegalBriefPDF(data: LegalBriefData): jsPDF {
     doc.text(formatCurrency(fee.amount), M + CW - 5, y, { align: 'right' });
     y += LH;
   });
-  doc.line(M, y - 4, M + CW, y - 4);
+  doc.line(M, y, M + CW, y);
+  y += 12;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.text('TOTAL', M + 5, y + 2);
-  doc.text(formatCurrency(data.estimatedFee), M + CW - 5, y + 2, { align: 'right' });
+  doc.text('TOTAL', M + 5, y);
+  doc.text(formatCurrency(data.estimatedFee), M + CW - 5, y, { align: 'right' });
 
   // Footer on every page
   const totalPages = doc.getNumberOfPages();
