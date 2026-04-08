@@ -7,9 +7,24 @@ import { SignUpPage } from './components/auth/SignUpPage';
 import { CodebaseUpload } from './components/analysis/CodebaseUpload';
 import { ProjectList } from './components/analysis/ProjectList';
 import { IPDashboard } from './components/ip/IPDashboard';
+import { TermsOfService } from './components/legal/TermsOfService';
 import type { Project } from './types';
 
-type View = 'projects' | 'upload' | 'editor';
+type View = 'projects' | 'upload' | 'editor' | 'terms';
+
+function Footer({ onTerms }: { onTerms: () => void }) {
+  return (
+    <footer className="border-t border-gray-100 mt-auto py-4 px-6">
+      <div className="max-w-6xl mx-auto flex items-center justify-center gap-1.5 text-xs text-gray-400">
+        <span>&copy; {new Date().getFullYear()} Git-Patent</span>
+        <span>&middot;</span>
+        <button onClick={onTerms} className="hover:text-indigo-600 transition-colors underline underline-offset-2">
+          Terms of Service
+        </button>
+      </div>
+    </footer>
+  );
+}
 
 function AppContent() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -25,11 +40,15 @@ function AppContent() {
     );
   }
 
+  if (view === 'terms') {
+    return <TermsOfService onBack={() => setView('projects')} />;
+  }
+
   if (!user) {
     if (authMode === 'signup') {
-      return <SignUpPage onToggleLogin={() => setAuthMode('login')} />;
+      return <SignUpPage onToggleLogin={() => setAuthMode('login')} onTerms={() => setView('terms')} />;
     }
-    return <LoginPage onToggleSignUp={() => setAuthMode('signup')} />;
+    return <LoginPage onToggleSignUp={() => setAuthMode('signup')} onTerms={() => setView('terms')} />;
   }
 
   const handleSelectProject = (project: Project) => {
@@ -47,12 +66,13 @@ function AppContent() {
     'projects': null,
     'upload': 'New Analysis',
     'editor': 'IP Editor',
+    'terms': 'Terms of Service',
   };
   const viewLabel = viewLabels[view];
   const userInitial = user.email ? user.email[0].toUpperCase() : 'U';
 
   return (
-    <div className="min-h-screen bg-gray-50/80">
+    <div className="min-h-screen bg-gray-50/80 flex flex-col">
       {/* Header */}
       <header className="bg-white sticky top-0 z-50 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -112,7 +132,7 @@ function AppContent() {
       </header>
 
       {/* Main content */}
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-6xl mx-auto px-6 py-8 flex-1">
         {view === 'projects' && (
           <ProjectList
             onSelectProject={handleSelectProject}
@@ -134,6 +154,8 @@ function AppContent() {
           <IPDashboard />
         )}
       </main>
+
+      <Footer onTerms={() => setView('terms')} />
     </div>
   );
 }

@@ -4,9 +4,10 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface SignUpPageProps {
   onToggleLogin: () => void;
+  onTerms?: () => void;
 }
 
-export function SignUpPage({ onToggleLogin }: SignUpPageProps) {
+export function SignUpPage({ onToggleLogin, onTerms }: SignUpPageProps) {
   const { signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -150,6 +151,15 @@ export function SignUpPage({ onToggleLogin }: SignUpPageProps) {
               Sign in
             </button>
           </p>
+
+          {onTerms && (
+            <p className="text-center text-xs text-gray-400 mt-4">
+              By signing up you agree to our{' '}
+              <button onClick={onTerms} className="underline underline-offset-2 hover:text-indigo-600 transition-colors">
+                Terms of Service
+              </button>
+            </p>
+          )}
         </div>
       </div>
 
