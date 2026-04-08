@@ -151,7 +151,14 @@ export async function ingestFromGitHub(
   // Step 2: Get full file tree (single request, CORS-friendly)
   const tree = await fetchRepoTree(parsed.owner, parsed.repo, metadata.defaultBranch, token);
 
-  // Step 3: Filter to analyzable code files
+  // Step 3: Fetch README BEFORE file contents to avoid GitHub rate limit exhaustion
+  // (unauthenticated limit is 60 req/hour; file fetches can consume all of them)
+  let readmeContent: string | null = null;
+  try {
+    readmeContent = await fetchReadmeContent(parsed.owner, parsed.repo, metadata.defaultBranch, token);
+  } catch { /* README is optional */ }
+
+  // Step 4: Filter to analyzable code files
   const analyzable = tree
     .filter(entry => !shouldSkipFile(entry.path))
     .filter(entry => {
@@ -171,7 +178,7 @@ export async function ingestFromGitHub(
 
   const toFetch = sorted.slice(0, MAX_GITHUB_FILES);
 
-  // Step 4: Fetch file contents (batched parallel requests)
+  // Step 5: Fetch file contents (batched parallel requests)
   const rawFiles = await fetchRepoFiles(parsed.owner, parsed.repo, toFetch, token, onProgress);
 
   // Set language on each file
@@ -181,12 +188,6 @@ export async function ingestFromGitHub(
       language: detectLanguage(f.path),
     }))
     .filter(f => f.language !== 'unknown' && f.content.length <= MAX_FILE_SIZE);
-
-  // Also fetch README for context in patent generation
-  let readmeContent: string | null = null;
-  try {
-    readmeContent = await fetchReadmeContent(parsed.owner, parsed.repo, metadata.defaultBranch, token);
-  } catch { /* README is optional */ }
 
   return { files, metadata, readmeContent };
 }
