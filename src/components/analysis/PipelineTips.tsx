@@ -42,8 +42,7 @@ const TIPS_BY_STAGE: Record<string, Tip[]> = {
     { title: 'Alice/Mayo Risk Assessment', icon: Shield, body: 'Git-Patent evaluates your claims against the Alice/Mayo framework used by patent examiners. Technical specificity, concrete data transformations, and hardware integration reduce rejection risk.' },
   ],
   assessing_ip: [
-    { title: 'Copyright vs. Patent', icon: Shield, body: 'Copyright protects your specific code expression automatically. Patents protect the underlying invention and require filing. Both are valuable but protect different things.' },
-    { title: 'Trademark Basics', icon: BookOpen, body: 'Your product name and logo can be trademarked. Trademark registration isn\'t required but strengthens enforcement. Git-Patent can help identify trademarkable elements.' },
+    { title: 'Provisional vs. Non-Provisional', icon: Shield, body: 'A provisional application establishes your priority date and gives you 12 months to file a non-provisional. It\'s faster, cheaper, and lets you use "Patent Pending" immediately.' },
     { title: 'Filing Timeline', icon: Clock, body: 'In the US, you have 1 year from first public disclosure to file a patent. Internationally, you must file before any public disclosure. File provisional applications early to preserve rights.' },
   ],
 };

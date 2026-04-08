@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Scale, Stamp, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
+import { FileText, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 
 interface FilingGuideProps {
   expanded?: boolean;
@@ -54,78 +54,7 @@ const SECTIONS: SectionConfig[] = [
       },
     ],
   },
-  {
-    id: 'copyright',
-    title: 'Copyright Filing',
-    icon: <Scale className="w-5 h-5" />,
-    accentFrom: 'from-violet-600',
-    accentTo: 'to-purple-600',
-    borderColor: 'border-l-violet-500',
-    badgeColor: 'bg-violet-50 text-violet-700 border-violet-200',
-    iconBg: 'bg-gradient-to-br from-violet-100 to-purple-100 text-violet-700',
-    steps: [
-      {
-        text: 'Go to copyright.gov and select eCO Online Registration',
-        detail: 'copyright.gov/registration',
-      },
-      {
-        text: 'Select "Literary Work" as the work type',
-        detail: 'Source code is legally classified as a literary work under U.S. copyright law.',
-      },
-      {
-        text: 'Enter the title, author name, and year of creation',
-        detail: 'Use the title from your Git-Patent copyright registration as a starting point.',
-      },
-      {
-        text: 'Upload a deposit copy of your source code',
-        detail: 'Zip your source code files and upload as the deposit. For published works, include the first and last 25 pages.',
-      },
-      {
-        text: 'Pay the $65 filing fee',
-        detail: 'Standard online filing fee. Paper filing costs $125.',
-      },
-      {
-        text: 'Receive your registration certificate',
-        detail: 'Typically arrives in 3-6 months. Registration is effective from the date of submission.',
-      },
-    ],
-  },
-  {
-    id: 'trademark',
-    title: 'Trademark Filing',
-    icon: <Stamp className="w-5 h-5" />,
-    accentFrom: 'from-amber-500',
-    accentTo: 'to-orange-500',
-    borderColor: 'border-l-amber-500',
-    badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
-    iconBg: 'bg-gradient-to-br from-amber-100 to-yellow-100 text-amber-700',
-    steps: [
-      {
-        text: 'Go to the USPTO TEAS system',
-        detail: 'teas.uspto.gov',
-      },
-      {
-        text: 'Select TEAS Plus for the lower filing fee ($250/class)',
-        detail: 'TEAS Plus requires selecting goods/services from the USPTO ID Manual. TEAS Standard is $350/class with more flexibility.',
-      },
-      {
-        text: 'Enter your mark text and select goods/services class',
-        detail: 'Use the Nice classification and goods/services description from your Git-Patent trademark application.',
-      },
-      {
-        text: 'Upload a specimen showing the mark in use',
-        detail: 'A screenshot of your product with the mark displayed. If not yet in use, file as "Intent to Use" (additional $100 fee later).',
-      },
-      {
-        text: 'Pay the fee per class',
-        detail: '$250/class for TEAS Plus. Each Nice class requires a separate fee.',
-      },
-      {
-        text: 'Monitor for Office Actions',
-        detail: 'First examiner response typically comes in 3-4 months. You have 6 months to respond to any Office Action.',
-      },
-    ],
-  },
+  // Copyright and Trademark filing guides removed — coming as separate products
 ];
 
 export function FilingGuide({ expanded = false }: FilingGuideProps) {

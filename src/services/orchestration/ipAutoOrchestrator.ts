@@ -113,7 +113,8 @@ Respond ONLY with a JSON array containing exactly ONE cluster (no extra text):
 }
 
 // ---------------------------------------------------------------------------
-// Step 3 — Assess copyrights
+// Step 3 — Assess copyrights (dormant — kept for future use)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 // ---------------------------------------------------------------------------
 
 interface CopyrightCandidate {
@@ -123,7 +124,8 @@ interface CopyrightCandidate {
   workType: string;
 }
 
-async function assessCopyrights(
+/** Dormant — kept for future copyright product */
+export async function assessCopyrights(
   projectId: string,
   userId: string,
   projectName: string,
@@ -209,7 +211,8 @@ Return 1-4 items maximum.`;
 }
 
 // ---------------------------------------------------------------------------
-// Step 4 — Detect trademarks
+// Step 4 — Detect trademarks (dormant — kept for future use)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 // ---------------------------------------------------------------------------
 
 interface TrademarkCandidate {
@@ -218,7 +221,8 @@ interface TrademarkCandidate {
   internationalClass: number;
 }
 
-async function detectTrademarks(
+/** Dormant — kept for future trademark product */
+export async function detectTrademarks(
   projectId: string,
   userId: string,
   projectName: string,
@@ -306,7 +310,7 @@ Return 1-3 items maximum. Only include names that are distinctive enough to func
 export async function runFullIPAnalysis(
   projectId: string,
   userId: string,
-  projectName: string,
+  _projectName: string,
   onProgress?: (progress: IPOrchestrationProgress) => void,
   applicantInfo?: ApplicantInfo
 ): Promise<IPAnalysisResult> {
@@ -469,49 +473,9 @@ export async function runFullIPAnalysis(
     console.error('Patent phase error:', err);
   }
 
-  // -----------------------------------------------------------------------
-  // 3. Assess copyrights (70-85%)
-  // -----------------------------------------------------------------------
-  try {
-    reportProgress(onProgress, 'copyrights', 'Identifying copyrightable works...', 70);
-
-    const copyrightIds = await assessCopyrights(projectId, userId, projectName, features, applicantInfo);
-    result.copyrightRegistrationIds = copyrightIds;
-
-    reportProgress(
-      onProgress,
-      'copyrights',
-      `Created ${copyrightIds.length} copyright registration(s)`,
-      85
-    );
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Unknown copyright error';
-    result.errors.push(`Copyright assessment failed: ${msg}`);
-    console.error('Copyright assessment error:', err);
-    reportProgress(onProgress, 'copyrights', 'Copyright assessment encountered errors', 85);
-  }
-
-  // -----------------------------------------------------------------------
-  // 4. Detect trademarks (85-95%)
-  // -----------------------------------------------------------------------
-  try {
-    reportProgress(onProgress, 'trademarks', 'Analyzing trademarkable names...', 85);
-
-    const trademarkIds = await detectTrademarks(projectId, userId, projectName, features, applicantInfo);
-    result.trademarkApplicationIds = trademarkIds;
-
-    reportProgress(
-      onProgress,
-      'trademarks',
-      `Created ${trademarkIds.length} trademark application(s)`,
-      95
-    );
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Unknown trademark error';
-    result.errors.push(`Trademark detection failed: ${msg}`);
-    console.error('Trademark detection error:', err);
-    reportProgress(onProgress, 'trademarks', 'Trademark detection encountered errors', 95);
-  }
+  // Copyright and Trademark generation skipped — dormant, will be separate products
+  // The functions assessCopyrights() and detectTrademarks() still exist for future use
+  reportProgress(onProgress, 'complete', 'Finalizing patent applications...', 95);
 
   // -----------------------------------------------------------------------
   // 5. Store results & update project metadata (95-100%)

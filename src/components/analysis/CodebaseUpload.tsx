@@ -180,7 +180,7 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
 
     setProgress({
       step: 'complete', progress: 100,
-      message: 'IP analysis complete! Patents, copyrights, and trademarks generated.',
+      message: 'Analysis complete! Patent applications generated.',
     });
     setTimeout(() => onAnalysisComplete(project), 1500);
   };

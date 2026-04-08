@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FileText, Scale, Stamp, Sparkles, ChevronRight, Code, Star } from 'lucide-react';
+import { FileText, Sparkles, ChevronRight, Code, Star } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useProject } from '../../contexts/ProjectContext';
 import type { ExtractedFeature } from '../../types';
@@ -131,33 +131,7 @@ export function AnalysisResults({ onNavigate }: AnalysisResultsProps) {
           <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-patent-600 group-hover:translate-x-1 transition-all" />
         </button>
 
-        <button
-          onClick={onNavigate}
-          className="flex flex-col items-center gap-4 p-8 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-violet-200 transition-all group"
-        >
-          <div className="w-16 h-16 bg-gradient-to-br from-violet-100 to-purple-100 rounded-2xl flex items-center justify-center group-hover:from-violet-200 group-hover:to-purple-200 transition-colors">
-            <Scale className="w-8 h-8 text-violet-700" />
-          </div>
-          <div className="text-center">
-            <div className="font-semibold text-gray-900 text-lg">Copyrights</div>
-            <div className="text-sm text-gray-500 mt-1">Register works</div>
-          </div>
-          <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-violet-600 group-hover:translate-x-1 transition-all" />
-        </button>
-
-        <button
-          onClick={onNavigate}
-          className="flex flex-col items-center gap-4 p-8 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-amber-200 transition-all group"
-        >
-          <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-yellow-100 rounded-2xl flex items-center justify-center group-hover:from-amber-200 group-hover:to-yellow-200 transition-colors">
-            <Stamp className="w-8 h-8 text-amber-700" />
-          </div>
-          <div className="text-center">
-            <div className="font-semibold text-gray-900 text-lg">Trademarks</div>
-            <div className="text-sm text-gray-500 mt-1">Protect marks</div>
-          </div>
-          <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
-        </button>
+        {/* Copyright and Trademark cards removed — coming as separate products */}
       </div>
 
       {/* Feature list */}
