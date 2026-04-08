@@ -201,7 +201,7 @@ export async function generateCompletePatentApplication(
     // Create concatenated specification including Brief Description of Drawings
     const concatenatedSpecification = formatSpecificationSections(specification);
 
-    await (supabase as any)
+    const { error: specSaveError } = await (supabase as any)
       .from('patent_applications')
       .update({
         field_of_invention: specification.field,
@@ -210,10 +210,14 @@ export async function generateCompletePatentApplication(
         detailed_description: specification.detailedDescription,
         abstract: specification.abstract,
         specification: concatenatedSpecification,
-        auto_generated: true,
-        last_regenerated_at: new Date().toISOString()
+        specification_generation_status: 'completed',
+        updated_at: new Date().toISOString()
       })
       .eq('id', config.applicationId);
+
+    if (specSaveError) {
+      console.error('Failed to save specification:', specSaveError);
+    }
 
     updateProgress('Specification generation completed', 'completed', { sections: 5 });
 
@@ -285,7 +289,7 @@ export async function regenerateSection(
   const { data: _features } = await (supabase as any)
     .from('patent_feature_mappings')
     .select('*')
-    .eq('patent_application_id', applicationId);
+    .eq('application_id', applicationId);
 
   return currentContent;
 }

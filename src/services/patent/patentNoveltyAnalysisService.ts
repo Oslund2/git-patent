@@ -182,8 +182,6 @@ export async function performNoveltyAnalysis(
     .from('patent_applications')
     .update({
       novelty_analysis_id: analysisId,
-      approval_score: approvalProbability,
-      approval_confidence: approvalProbability,
       novelty_score: overallScore
     })
     .eq('id', patentApplicationId);
@@ -334,19 +332,21 @@ function calculateFeatureScores(features: any[]): Record<string, number> {
 async function updateAnalysisScores(
   analysisId: string,
   noveltyScore: number,
-  _approvalProbability: number,
+  approvalProbability: number,
   aiAssessment: any
 ): Promise<void> {
   await (supabase as any)
     .from('patent_novelty_analyses')
     .update({
-      overall_novelty_score: noveltyScore,
-      implementation_uniqueness_score: noveltyScore * 0.85,
-      commercial_viability_score: noveltyScore * 1.1,
-      novelty_strengths: aiAssessment.strengths || [],
-      novelty_weaknesses: aiAssessment.weaknesses || [],
-      recommendations: aiAssessment.recommendations || [],
-      patentability_assessment: aiAssessment.assessment || ''
+      overall_score: noveltyScore,
+      approval_probability: approvalProbability,
+      strength_rating: noveltyScore >= 70 ? 'strong' : noveltyScore >= 40 ? 'moderate' : 'weak',
+      analysis_data: {
+        strengths: aiAssessment.strengths || [],
+        weaknesses: aiAssessment.weaknesses || [],
+        recommendations: aiAssessment.recommendations || [],
+        assessment: aiAssessment.assessment || '',
+      }
     })
     .eq('id', analysisId);
 }
@@ -356,7 +356,7 @@ export async function getNoveltyAnalysis(
 ): Promise<any | null> {
   const { data: app } = await (supabase as any)
     .from('patent_applications')
-    .select('novelty_analysis_id, approval_score, approval_confidence, novelty_score')
+    .select('novelty_analysis_id, novelty_score')
     .eq('id', patentApplicationId)
     .maybeSingle();
 
@@ -374,40 +374,27 @@ export async function getNoveltyAnalysis(
     return null;
   }
 
-  const { data: featureMappings } = await (supabase as any)
-    .from('patent_feature_mappings')
-    .select('*')
-    .eq('novelty_analysis_id', app.novelty_analysis_id)
-    .order('feature_name');
+  // Feature data is stored in analysis_data JSONB
+  const analysisData = analysis.analysis_data || {};
+  const extractedFeatures = analysisData.extracted_features || [];
 
-  const keyFeatures = (featureMappings || []).map((mapping: any) => ({
-    feature_name: mapping.feature_name,
-    description: mapping.technical_description || '',
-    novelty_score: calculateIndividualFeatureScore(mapping.novelty_strength)
+  const keyFeatures = extractedFeatures.map((feature: any) => ({
+    feature_name: feature.name,
+    description: feature.description,
+    novelty_score: calculateIndividualFeatureScore(feature.noveltyStrength || feature.novelty_strength)
   }));
-
-  const extractedFeatures = analysis.extracted_features || [];
-  if (keyFeatures.length === 0 && extractedFeatures.length > 0) {
-    extractedFeatures.forEach((feature: any) => {
-      keyFeatures.push({
-        feature_name: feature.name,
-        description: feature.description,
-        novelty_score: calculateIndividualFeatureScore(feature.noveltyStrength)
-      });
-    });
-  }
 
   return {
     id: analysis.id,
-    overall_novelty_score: analysis.overall_novelty_score || app.novelty_score || 0,
-    confidence_score: (app.approval_confidence || 0) / 100,
-    technical_depth_score: analysis.technical_depth_score || 0,
-    implementation_uniqueness_score: analysis.implementation_uniqueness_score || 0,
-    commercial_viability_score: analysis.commercial_viability_score || 0,
-    patentability_assessment: analysis.patentability_assessment || '',
-    novelty_strengths: analysis.novelty_strengths || [],
-    novelty_weaknesses: analysis.novelty_weaknesses || [],
-    recommendations: analysis.recommendations || [],
+    overall_novelty_score: analysis.overall_score || app.novelty_score || 0,
+    confidence_score: (analysis.approval_probability || 0) / 100,
+    technical_depth_score: 0,
+    implementation_uniqueness_score: 0,
+    commercial_viability_score: 0,
+    patentability_assessment: analysisData.assessment || '',
+    novelty_strengths: analysisData.strengths || [],
+    novelty_weaknesses: analysisData.weaknesses || [],
+    recommendations: analysisData.recommendations || [],
     key_features: keyFeatures,
     extracted_features: extractedFeatures
   };
@@ -441,7 +428,7 @@ export async function performAliceRiskAssessment(
   const { data: features } = await (supabase as any)
     .from('patent_feature_mappings')
     .select('feature_name, technical_description, novelty_strength')
-    .eq('patent_application_id', patentApplicationId);
+    .eq('application_id', patentApplicationId);
 
   if (!claims || claims.length === 0) {
     return getDefaultAliceAssessment('No claims found to analyze');

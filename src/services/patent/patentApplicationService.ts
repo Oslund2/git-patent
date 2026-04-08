@@ -230,9 +230,9 @@ export async function getPatentApplication(applicationId: string, userId: string
   if (drawingsError) throw drawingsError;
 
   const { data: priorArt, error: priorArtError } = await (supabase as any)
-    .from('patent_prior_art_search_results')
+    .from('patent_prior_art_results')
     .select('*')
-    .eq('patent_application_id', applicationId)
+    .eq('application_id', applicationId)
     .order('relevance_score', { ascending: false });
 
   if (priorArtError) console.error('Error loading prior art:', priorArtError);

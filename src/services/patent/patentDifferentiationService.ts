@@ -18,18 +18,19 @@ export async function generateDifferentiationReport(
   projectId: string,
   patentApplicationId: string,
   priorArtId: string,
-  userId: string
+  _userId: string
 ): Promise<string> {
   const { data: priorArt } = await (supabase as any)
-    .from('patent_prior_art_search_results')
+    .from('patent_prior_art_results')
     .select('*')
     .eq('id', priorArtId)
     .single();
 
+  // Load features from extracted_features table instead of non-existent patent_feature_mappings
   const { data: features } = await (supabase as any)
-    .from('patent_feature_mappings')
+    .from('extracted_features')
     .select('*')
-    .eq('patent_application_id', patentApplicationId);
+    .eq('project_id', projectId);
 
   if (!priorArt || !features) {
     throw new Error('Missing data for differentiation report');
@@ -37,23 +38,24 @@ export async function generateDifferentiationReport(
 
   const analysis = await generateDifferentiationAnalysis(priorArt, features, projectId);
 
+  // Store in patent_differentiation_reports using actual schema columns:
+  // id, application_id, prior_art_id, report_text, metadata, created_at
   const { data, error } = await (supabase as any)
     .from('patent_differentiation_reports')
     .insert({
       application_id: patentApplicationId,
-      project_id: projectId,
-      patent_application_id: patentApplicationId,
-      prior_art_result_id: priorArtId,
-      points_of_novelty: analysis.pointsOfNovelty,
-      technical_advantages: analysis.technicalAdvantages,
-      feature_comparison_matrix: analysis.comparisonMatrix,
-      differentiation_summary: analysis.summary,
-      improvement_quantification: analysis.quantification,
-      unexpected_results: analysis.unexpectedResults,
-      non_obviousness_argument: analysis.nonObviousnessArgument,
-      differentiation_strength_score: analysis.strengthScore,
-      patent_distance_score: analysis.distanceScore,
-      created_by: userId
+      prior_art_id: priorArtId,
+      report_text: analysis.summary || '',
+      metadata: {
+        points_of_novelty: analysis.pointsOfNovelty,
+        technical_advantages: analysis.technicalAdvantages,
+        feature_comparison_matrix: analysis.comparisonMatrix,
+        improvement_quantification: analysis.quantification,
+        unexpected_results: analysis.unexpectedResults,
+        non_obviousness_argument: analysis.nonObviousnessArgument,
+        differentiation_strength_score: analysis.strengthScore,
+        patent_distance_score: analysis.distanceScore,
+      }
     })
     .select()
     .single();
@@ -67,14 +69,14 @@ async function generateDifferentiationAnalysis(
   features: any[],
   projectId: string
 ): Promise<any> {
-  const featuresText = features.map((f, i) => `${i + 1}. ${f.feature_name} (${f.novelty_strength} novelty)
-   Type: ${f.feature_type}
-   Description: ${f.technical_description}`).join('\n\n');
+  const featuresText = features.map((f: any, i: number) => `${i + 1}. ${f.name} (${f.novelty_strength} novelty)
+   Type: ${f.type}
+   Description: ${f.technical_details || f.description}`).join('\n\n');
 
-  const priorArtText = `Patent Number: ${priorArt.patent_number}
-Title: ${priorArt.patent_title}
-Abstract: ${priorArt.patent_abstract}
-Relevance Score: ${priorArt.relevance_score}/100`;
+  const priorArtText = `Patent Number: ${priorArt.patent_number || 'N/A'}
+Title: ${priorArt.title || 'N/A'}
+Abstract: ${priorArt.abstract || 'N/A'}
+Relevance Score: ${priorArt.relevance_score || 0}/100`;
 
   try {
     const prompt = await getPatentDifferentiationPrompt(projectId, {
@@ -96,37 +98,19 @@ Relevance Score: ${priorArt.relevance_score}/100`;
   return {
     pointsOfNovelty: [
       'Novel algorithmic approach with configurable parameters',
-      'Multi-version management with atomic deployment switching',
-      'Integrated cost comparison across multiple methodologies',
-      'Real-time progress tracking with multi-job-type aggregation',
-      'Automated extraction with structured mapping'
+      'Integrated system design combining multiple components',
     ],
     technicalAdvantages: [
-      'Enables rapid iteration with version-controlled templates',
-      'Provides accurate cost projections with learning curve modeling',
-      'Automates labor-intensive analysis and breakdown'
+      'Enables rapid iteration with automated workflows',
+      'Provides accurate analysis through systematic approach',
     ],
-    comparisonMatrix: {
-      'Cost Modeling': {
-        priorArt: 'Static cost estimates without learning curves',
-        ourInvention: 'Dynamic modeling with configurable profiles'
-      },
-      'Content Versioning': {
-        priorArt: 'Not addressed',
-        ourInvention: 'Multi-version system with atomic deployment and rollback'
-      }
-    },
-    quantification: {
-      costReduction: 'Significant reduction vs traditional approaches',
-      speedImprovement: 'Faster processing through automation',
-      accuracyImprovement: 'Higher consistency through systematic approach',
-      scalability: 'Handles growth without linear cost increase'
-    },
-    unexpectedResults: 'The system revealed that efficiency gains compound faster than initially predicted, with some workflows achieving significant cost reduction over successive iterations.',
-    nonObviousnessArgument: 'The specific combination of integrated components working together creates a synergistic system that would not be obvious from prior art. The integration of these components solves technical problems that prior art does not address.',
-    summary: 'Our invention substantially advances beyond the cited prior art by providing an integrated, end-to-end system with intelligent modeling and management. The specific technical implementations represent non-obvious improvements that address real production challenges.',
-    strengthScore: 87,
-    distanceScore: 78
+    comparisonMatrix: {},
+    quantification: {},
+    unexpectedResults: '',
+    nonObviousnessArgument: 'The specific combination of integrated components creates a synergistic system that would not be obvious from prior art.',
+    summary: 'The invention advances beyond the cited prior art by providing an integrated system with novel technical implementations.',
+    strengthScore: 70,
+    distanceScore: 65
   };
 }
 
@@ -136,22 +120,28 @@ export async function getDifferentiationReports(
   const { data, error } = await (supabase as any)
     .from('patent_differentiation_reports')
     .select('*')
-    .eq('patent_application_id', patentApplicationId)
+    .eq('application_id', patentApplicationId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    console.error('Failed to load differentiation reports:', error);
+    return [];
+  }
 
-  return (data || []).map((report: any) => ({
-    id: report.id,
-    pointsOfNovelty: report.points_of_novelty || [],
-    technicalAdvantages: report.technical_advantages || [],
-    comparisonMatrix: report.feature_comparison_matrix || {},
-    differentiationSummary: report.differentiation_summary || '',
-    improvementQuantification: report.improvement_quantification || {},
-    unexpectedResults: report.unexpected_results || '',
-    nonObviousnessArgument: report.non_obviousness_argument || '',
-    differentiationScore: report.differentiation_strength_score || 0
-  }));
+  return (data || []).map((report: any) => {
+    const meta = report.metadata || {};
+    return {
+      id: report.id,
+      pointsOfNovelty: meta.points_of_novelty || [],
+      technicalAdvantages: meta.technical_advantages || [],
+      comparisonMatrix: meta.feature_comparison_matrix || {},
+      differentiationSummary: report.report_text || '',
+      improvementQuantification: meta.improvement_quantification || {},
+      unexpectedResults: meta.unexpected_results || '',
+      nonObviousnessArgument: meta.non_obviousness_argument || '',
+      differentiationScore: meta.differentiation_strength_score || 0
+    };
+  });
 }
 
 export async function generateComprehensiveDifferentiation(
@@ -160,9 +150,9 @@ export async function generateComprehensiveDifferentiation(
   userId: string
 ): Promise<void> {
   const { data: priorArtResults } = await (supabase as any)
-    .from('patent_prior_art_search_results')
+    .from('patent_prior_art_results')
     .select('id, relevance_score')
-    .eq('patent_application_id', patentApplicationId)
+    .eq('application_id', patentApplicationId)
     .gte('relevance_score', 60)
     .order('relevance_score', { ascending: false })
     .limit(3);

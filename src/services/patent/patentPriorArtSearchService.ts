@@ -199,9 +199,9 @@ async function savePriorArtResults(
   console.log(`Deduplicating prior art: ${results.length} -> ${uniqueResults.length} unique results`);
 
   await (supabase as any)
-    .from('patent_prior_art_search_results')
+    .from('patent_prior_art_results')
     .delete()
-    .eq('patent_application_id', patentApplicationId);
+    .eq('application_id', patentApplicationId);
 
   if (uniqueResults.length === 0) {
     console.log('No prior art results to save, skipping insert');
@@ -216,33 +216,34 @@ async function savePriorArtResults(
     return;
   }
 
+  // Map to actual schema: id, application_id, patent_number, title, abstract,
+  // relevance_score, similarity_score, source, metadata, created_at
   const records = uniqueResults.map(result => ({
-    project_id: projectId,
-    patent_application_id: patentApplicationId,
-    search_query: searchQuery,
-    search_source: 'google_patents',
+    application_id: patentApplicationId,
     patent_number: result.patentNumber,
-    patent_title: result.title,
-    patent_abstract: result.abstract,
-    patent_filing_date: result.filingDate || null,
-    patent_grant_date: result.grantDate || null,
-    patent_assignee: result.assignee,
-    patent_inventors: result.inventors,
-    patent_url: result.url,
+    title: result.title,
+    abstract: result.abstract,
     relevance_score: result.relevanceScore,
-    technical_similarity_score: result.technicalSimilarityScore,
-    similarity_explanation: result.similarityExplanation,
-    relationship_type: result.relationshipType,
-    is_blocking: result.isBlocking,
-    threatened_claims: result.threatenedClaims || [],
-    claim_overlap_analysis: result.claimOverlapAnalysis || '',
-    is_related: true,
-    user_marked_relevant: true,
-    included_in_application: result.relevanceScore >= 70
+    similarity_score: result.technicalSimilarityScore || result.relevanceScore,
+    source: 'google_patents',
+    metadata: {
+      search_query: searchQuery,
+      project_id: projectId,
+      filing_date: result.filingDate || null,
+      grant_date: result.grantDate || null,
+      assignee: result.assignee,
+      inventors: result.inventors,
+      url: result.url,
+      similarity_explanation: result.similarityExplanation,
+      relationship_type: result.relationshipType,
+      is_blocking: result.isBlocking,
+      threatened_claims: result.threatenedClaims || [],
+      claim_overlap_analysis: result.claimOverlapAnalysis || '',
+    }
   }));
 
   const { error } = await (supabase as any)
-    .from('patent_prior_art_search_results')
+    .from('patent_prior_art_results')
     .insert(records);
 
   if (error) {
@@ -263,24 +264,29 @@ export async function getPriorArtResults(
   patentApplicationId: string
 ): Promise<any[]> {
   const { data, error } = await (supabase as any)
-    .from('patent_prior_art_search_results')
+    .from('patent_prior_art_results')
     .select('*')
-    .eq('patent_application_id', patentApplicationId)
+    .eq('application_id', patentApplicationId)
     .order('relevance_score', { ascending: false });
 
   if (error) throw error;
 
-  // Map database columns to UI-expected field names and normalize scores
+  // Map database columns to UI-expected field names
+  const meta = (r: any) => r.metadata || {};
   return (data || []).map((result: any) => ({
     ...result,
-    title: result.patent_title,
-    abstract: result.patent_abstract,
-    assignee: result.patent_assignee,
-    // Normalize scores from 0-100 range to 0-1 range
-    relevance_score: result.relevance_score / 100,
-    similarity_score: result.technical_similarity_score / 100,
-    threatened_claims: result.threatened_claims || [],
-    claim_overlap_analysis: result.claim_overlap_analysis || '',
+    patent_number: result.patent_number,
+    patent_title: result.title,
+    patent_abstract: result.abstract,
+    assignee: meta(result).assignee,
+    relevance_score: result.relevance_score,
+    similarity_score: result.similarity_score,
+    similarity_explanation: meta(result).similarity_explanation || '',
+    relationship_type: meta(result).relationship_type || '',
+    is_blocking: meta(result).is_blocking || false,
+    threatened_claims: meta(result).threatened_claims || [],
+    claim_overlap_analysis: meta(result).claim_overlap_analysis || '',
+    url: meta(result).url || '',
   }));
 }
 
@@ -291,18 +297,18 @@ export async function addManualPriorArt(
   userNotes?: string
 ): Promise<string> {
   const { data, error } = await (supabase as any)
-    .from('patent_prior_art_search_results')
+    .from('patent_prior_art_results')
     .insert({
-      project_id: projectId,
-      patent_application_id: patentApplicationId,
-      search_query: 'Manual Entry',
-      search_source: 'manual',
+      application_id: patentApplicationId,
       patent_number: patentNumber,
-      patent_title: 'Manually Added Patent',
-      patent_url: `https://patents.google.com/patent/${patentNumber.replace(/[^A-Z0-9]/g, '')}`,
-      user_notes: userNotes,
-      user_marked_relevant: true,
-      included_in_application: true
+      title: 'Manually Added Patent',
+      source: 'manual',
+      metadata: {
+        project_id: projectId,
+        url: `https://patents.google.com/patent/${patentNumber.replace(/[^A-Z0-9]/g, '')}`,
+        user_notes: userNotes,
+        user_marked_relevant: true,
+      }
     })
     .select()
     .single();
@@ -317,7 +323,7 @@ export async function updatePriorArtRelevance(
   notes?: string
 ): Promise<void> {
   const { error } = await (supabase as any)
-    .from('patent_prior_art_search_results')
+    .from('patent_prior_art_results')
     .update({
       user_marked_relevant: isRelevant,
       included_in_application: isRelevant,

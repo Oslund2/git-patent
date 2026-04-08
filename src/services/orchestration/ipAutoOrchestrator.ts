@@ -94,11 +94,15 @@ Respond ONLY with a JSON array containing exactly ONE cluster (no extra text):
   }
 ]`;
 
-  const response = await generateText(prompt, 'feature_synthesis');
-  const clusters = parseJsonFromResponse<InnovationCluster[]>(response);
+  try {
+    const response = await generateText(prompt, 'feature_synthesis');
+    const clusters = parseJsonFromResponse<InnovationCluster[]>(response);
 
-  if (clusters && Array.isArray(clusters) && clusters.length > 0) {
-    return clusters;
+    if (clusters && Array.isArray(clusters) && clusters.length > 0) {
+      return clusters;
+    }
+  } catch (err) {
+    console.error('Feature clustering AI call failed, using fallback:', err);
   }
 
   // Fallback — single cluster with all features

@@ -325,9 +325,9 @@ export async function loadLegalBriefData(applicationId: string, projectId: strin
 
   // Load prior art
   const { data: priorArt } = await (supabase as any)
-    .from('patent_prior_art_search_results')
+    .from('patent_prior_art_results')
     .select('patent_number, patent_title, relevance_score, is_blocking, similarity_explanation')
-    .eq('patent_application_id', applicationId)
+    .eq('application_id', applicationId)
     .order('relevance_score', { ascending: false });
 
   // Load novelty analysis

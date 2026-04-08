@@ -156,7 +156,13 @@ Respond in this exact JSON format (no additional text):
   "technicalSummary": "A 2-3 sentence summary of the invention's key technical innovations"
 }`;
 
-  const response = await generateText(prompt, 'patent_feature_extraction');
+  let response: string;
+  try {
+    response = await generateText(prompt, 'patent_feature_extraction');
+  } catch (err) {
+    console.error('Feature extraction AI call failed, using fallback:', err);
+    return createFallbackFeatures(invention);
+  }
 
   let parsed;
   try {
@@ -231,27 +237,26 @@ function createFallbackFeatures(invention: InventionInput): FeatureAnalysisResul
 export async function createFeatureAnalysis(
   projectId: string,
   patentApplicationId: string | null,
-  userId: string
+  _userId: string
 ): Promise<string> {
   const analysisResult = await extractCodebaseFeatures(projectId);
+  const noveltyScore = calculateOverallNoveltyScore(analysisResult.features);
 
   const { data, error } = await (supabase as any)
     .from('patent_novelty_analyses')
     .insert({
       application_id: patentApplicationId,
-      project_id: projectId,
-      patent_application_id: patentApplicationId,
-      extracted_features: analysisResult.features,
-      service_files_analyzed: analysisResult.serviceFilesAnalyzed.length,
-      algorithms_identified: analysisResult.algorithmsIdentified.length,
-      data_structures_identified: analysisResult.dataStructuresIdentified.length,
-      integration_patterns: analysisResult.integrationPatterns.length,
-      overall_novelty_score: calculateOverallNoveltyScore(analysisResult.features),
-      technical_depth_score: 85.0,
-      implementation_uniqueness_score: 78.0,
-      commercial_viability_score: 92.0,
-      patentability_assessment: analysisResult.technicalSummary,
-      created_by: userId
+      overall_score: noveltyScore,
+      approval_probability: Math.min(noveltyScore + 10, 100),
+      strength_rating: noveltyScore >= 70 ? 'strong' : noveltyScore >= 40 ? 'moderate' : 'weak',
+      analysis_data: {
+        extracted_features: analysisResult.features,
+        service_files_analyzed: analysisResult.serviceFilesAnalyzed.length,
+        algorithms_identified: analysisResult.algorithmsIdentified.length,
+        data_structures_identified: analysisResult.dataStructuresIdentified.length,
+        integration_patterns: analysisResult.integrationPatterns.length,
+        patentability_assessment: analysisResult.technicalSummary,
+      }
     })
     .select()
     .single();
@@ -290,28 +295,12 @@ export async function getFeatureAnalysis(
 }
 
 export async function createFeatureMappings(
-  projectId: string,
-  patentApplicationId: string,
-  noveltyAnalysisId: string,
+  _projectId: string,
+  _patentApplicationId: string,
+  _noveltyAnalysisId: string,
   features: ExtractedFeature[]
 ): Promise<void> {
-  const mappings = features.map((feature, index) => ({
-    project_id: projectId,
-    patent_application_id: patentApplicationId,
-    novelty_analysis_id: noveltyAnalysisId,
-    feature_name: feature.name,
-    feature_type: feature.type,
-    source_file_path: feature.sourceFile || null,
-    technical_description: feature.technicalDetails,
-    code_snippet: feature.codeSnippet || null,
-    novelty_strength: feature.noveltyStrength,
-    is_core_innovation: feature.isCoreInnovation,
-    mapped_claim_numbers: [index + 1]
-  }));
-
-  const { error } = await (supabase as any)
-    .from('patent_feature_mappings')
-    .insert(mappings);
-
-  if (error) throw error;
+  // Feature mappings are stored in the analysis_data JSONB of patent_novelty_analyses
+  // No separate table needed — this is a no-op kept for interface compatibility
+  console.log(`[Novelty] ${features.length} features mapped to analysis`);
 }
