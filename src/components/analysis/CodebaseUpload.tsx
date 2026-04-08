@@ -58,12 +58,19 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
   const [wizardOpen, setWizardOpen] = useState(true);
   const startRef = useRef(0);
 
+  // Track paid project ID from Stripe redirect so we don't re-charge
+  const [paidProjectId, setPaidProjectId] = useState<string | null>(null);
+
   // Detect Stripe payment redirect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const paymentStatus = params.get('payment');
+    const projectId = params.get('project_id');
     if (paymentStatus === 'success' || paymentStatus === 'cancelled') {
       setPaymentBanner(paymentStatus);
+      if (paymentStatus === 'success' && projectId) {
+        setPaidProjectId(projectId);
+      }
       // Clean up URL without reload
       const url = new URL(window.location.href);
       url.searchParams.delete('payment');
@@ -216,9 +223,9 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
     setError('');
     setWarnings([]);
 
-    // Payment gate for external users
+    // Payment gate for external users (skip if returning from successful Stripe payment)
     const projectName = repoUrl.split('/').slice(-2).join('/');
-    if (!isInternalUser()) {
+    if (!isInternalUser() && !paidProjectId) {
       setLoading(true);
       try {
         const proceed = await checkPaymentGate(projectName);
@@ -235,11 +242,23 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
     setProgress({ step: 'fetching', progress: 0, message: 'Fetching repository...' });
 
     try {
-      const project = await createProject({
-        name: repoUrl.split('/').slice(-2).join('/'),
-        source_type: 'github_url',
-        source_url: repoUrl.trim(),
-      });
+      // Reuse the paid project if returning from Stripe, otherwise create a new one
+      let project;
+      if (paidProjectId) {
+        await updateProject(paidProjectId, {
+          name: projectName,
+          source_type: 'github_url',
+          source_url: repoUrl.trim(),
+        } as any);
+        project = { id: paidProjectId, name: projectName };
+        setPaidProjectId(null); // Clear so it's not reused
+      } else {
+        project = await createProject({
+          name: projectName,
+          source_type: 'github_url',
+          source_url: repoUrl.trim(),
+        });
+      }
 
       await updateProject(project.id, { analysis_status: 'analyzing' });
 
@@ -313,9 +332,9 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
     setError('');
     setWarnings([]);
 
-    // Payment gate for external users
+    // Payment gate for external users (skip if returning from successful Stripe payment)
     const projectName = zipFile.name.replace(/\.zip$/i, '');
-    if (!isInternalUser()) {
+    if (!isInternalUser() && !paidProjectId) {
       setLoading(true);
       try {
         const proceed = await checkPaymentGate(projectName);
@@ -332,11 +351,20 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
     setProgress({ step: 'fetching', progress: 0, message: 'Reading ZIP file...' });
 
     try {
-      const projectName = zipFile.name.replace(/\.zip$/i, '');
-      const project = await createProject({
-        name: projectName,
-        source_type: 'zip_upload',
-      });
+      let project;
+      if (paidProjectId) {
+        await updateProject(paidProjectId, {
+          name: projectName,
+          source_type: 'zip_upload',
+        } as any);
+        project = { id: paidProjectId, name: projectName };
+        setPaidProjectId(null);
+      } else {
+        project = await createProject({
+          name: projectName,
+          source_type: 'zip_upload',
+        });
+      }
       await updateProject(project.id, { analysis_status: 'analyzing' });
 
       setProgress({ step: 'fetching', progress: 3, message: 'Extracting files from ZIP...' });
@@ -585,15 +613,15 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
               onClick={handleGitHubAnalysis}
               disabled={loading || !repoUrl.trim()}
               className={`w-full flex items-center justify-center gap-2 text-white font-semibold py-3.5 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base ${
-                isInternalUser()
+                isInternalUser() || paidProjectId
                   ? 'bg-gradient-to-r from-patent-600 to-indigo-600 hover:shadow-lg hover:shadow-patent-600/25'
                   : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:shadow-lg hover:shadow-violet-600/25'
               }`}
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : isInternalUser() ? <ArrowRight className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
-              {loading ? 'Analyzing...' : isInternalUser() ? 'Analyze Repository' : 'Pay & Analyze Repository'}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isInternalUser() || paidProjectId) ? <ArrowRight className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
+              {loading ? 'Analyzing...' : (isInternalUser() || paidProjectId) ? 'Analyze Repository' : 'Pay & Analyze Repository'}
             </button>
-            {!isInternalUser() && (
+            {!isInternalUser() && !paidProjectId && (
               <div className="flex items-center justify-center gap-1.5 mt-2 text-xs text-gray-400">
                 <Lock className="w-3 h-3" />
                 <span>Secure payment via Stripe — one-time charge per project</span>
@@ -728,15 +756,15 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
               onClick={handleZipAnalysis}
               disabled={loading || !zipFile}
               className={`w-full flex items-center justify-center gap-2 text-white font-semibold py-3.5 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base ${
-                isInternalUser()
+                isInternalUser() || paidProjectId
                   ? 'bg-gradient-to-r from-violet-600 to-purple-600 hover:shadow-lg hover:shadow-violet-600/25'
                   : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:shadow-lg hover:shadow-violet-600/25'
               }`}
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : isInternalUser() ? <ArrowRight className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
-              {loading ? 'Analyzing...' : isInternalUser() ? 'Analyze Codebase' : 'Pay & Analyze Codebase'}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isInternalUser() || paidProjectId) ? <ArrowRight className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
+              {loading ? 'Analyzing...' : (isInternalUser() || paidProjectId) ? 'Analyze Codebase' : 'Pay & Analyze Codebase'}
             </button>
-            {!isInternalUser() && (
+            {!isInternalUser() && !paidProjectId && (
               <div className="flex items-center justify-center gap-1.5 mt-2 text-xs text-gray-400">
                 <Lock className="w-3 h-3" />
                 <span>Secure payment via Stripe — one-time charge per project</span>
