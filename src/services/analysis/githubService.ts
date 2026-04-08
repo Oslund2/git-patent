@@ -14,11 +14,13 @@ export function parseGitHubUrl(url: string): { owner: string; repo: string } | n
   return null;
 }
 
+/** Use explicit token, or fall back to env var for authenticated rate limits (5,000/hr vs 60/hr) */
 function getHeaders(token?: string): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github.v3+json',
   };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  const effectiveToken = token || import.meta.env.VITE_GITHUB_TOKEN;
+  if (effectiveToken) headers.Authorization = `Bearer ${effectiveToken}`;
   return headers;
 }
 
