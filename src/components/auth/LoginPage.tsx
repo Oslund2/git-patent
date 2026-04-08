@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, GitFork, Mail, Lock, ArrowRight, Zap, FileText, Search, BarChart3, CheckCircle } from 'lucide-react';
+import { Shield, Mail, Lock, ArrowRight, Zap, FileText, Search, BarChart3, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface LoginPageProps {
@@ -7,7 +7,7 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onToggleSignUp }: LoginPageProps) {
-  const { signIn, signInWithGitHub, signInAsGuest } = useAuth();
+  const { signIn, signInAsGuest } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -22,11 +22,12 @@ export function LoginPage({ onToggleSignUp }: LoginPageProps) {
     setLoading(false);
   };
 
-  const handleGitHub = async () => {
-    setError('');
-    const { error } = await signInWithGitHub();
-    if (error) setError(error.message);
-  };
+  // GitHub OAuth handler — dormant until provider is configured
+  // const handleGitHub = async () => {
+  //   setError('');
+  //   const { error } = await signInWithGitHub();
+  //   if (error) setError(error.message);
+  // };
 
   return (
     <div className="min-h-screen flex bg-white">
@@ -130,13 +131,7 @@ export function LoginPage({ onToggleSignUp }: LoginPageProps) {
             Get Started — No Account Needed
           </button>
 
-          <button
-            onClick={handleGitHub}
-            className="w-full flex items-center justify-center gap-2.5 bg-gray-900 text-white font-semibold py-3 px-4 rounded-xl hover:bg-gray-800 transition-all hover:shadow-md mb-5 text-sm"
-          >
-            <GitFork className="w-4 h-4" />
-            Continue with GitHub
-          </button>
+          {/* GitHub OAuth button — dormant until provider is configured */}
 
           <div className="relative mb-5">
             <div className="absolute inset-0 flex items-center">
