@@ -1,6 +1,35 @@
 import { generateText } from '../ai/geminiService';
 import { supabase } from '../../lib/supabase';
 
+/**
+ * Trim text to the last complete sentence within a word limit.
+ * Splits on sentence-ending punctuation (.!?) and keeps as many
+ * complete sentences as fit within maxWords.
+ */
+function trimToCompleteSentences(text: string, maxWords: number): string {
+  const words = text.split(/\s+/);
+  if (words.length <= maxWords) return text;
+
+  // Take the first maxWords words, then find the last sentence boundary
+  const truncated = words.slice(0, maxWords).join(' ');
+  const lastSentenceEnd = Math.max(
+    truncated.lastIndexOf('. '),
+    truncated.lastIndexOf('.) '),
+    truncated.lastIndexOf('? '),
+    truncated.lastIndexOf('! ')
+  );
+
+  // Also check if it ends with sentence-ending punctuation
+  if (/[.!?]$/.test(truncated)) return truncated;
+
+  if (lastSentenceEnd > 0) {
+    return truncated.substring(0, lastSentenceEnd + 1);
+  }
+
+  // No sentence boundary found — return the full truncated text with a period
+  return truncated + '.';
+}
+
 // Inline prompt builders for patent specification sections
 
 const GROUNDING_RULE = `
@@ -13,6 +42,7 @@ CRITICAL GROUNDING RULES — FOLLOW EXACTLY:
 6. If a feature lacks detail, describe it briefly — do NOT fill gaps with speculation or academic-sounding jargon.
 7. Every technical claim MUST correspond to a named feature from the list above.
 8. Write about what the software ACTUALLY DOES, not what a hypothetical system in this domain COULD do.
+9. No output is better than a false output. If you cannot generate accurate content grounded in the provided features, return an empty response rather than fabricating generic placeholder text.
 `;
 
 /** Format features with full technical details and code snippets for grounding */
@@ -471,7 +501,7 @@ async function generateFieldSection(
     return response.trim();
   } catch (error) {
     console.error('Field section generation failed:', error);
-    return 'The present invention relates generally to computer-implemented systems and methods.';
+    return '';
   }
 }
 
@@ -510,7 +540,7 @@ async function generateBackgroundSection(
     return response.trim();
   } catch (error) {
     console.error('Background section generation failed:', error);
-    return 'The relevant technical field has seen significant advances in recent years. However, existing systems suffer from various limitations that the present invention addresses.';
+    return '';
   }
 }
 
@@ -552,7 +582,7 @@ async function generateSummarySection(
     return response.trim();
   } catch (error) {
     console.error('Summary section generation failed:', error);
-    return 'The present invention provides a system and method with improved efficiency and quality.';
+    return '';
   }
 }
 
@@ -657,10 +687,10 @@ async function generateAbstractSection(
     });
 
     const response = await generateText(prompt, 'patent_abstract_generation');
-    return response.trim().slice(0, 1000);
+    return trimToCompleteSentences(response.trim(), 150);
   } catch (error) {
     console.error('Abstract section generation failed:', error);
-    return `A system and method for ${title.toLowerCase()} is disclosed. The system provides automated processing capabilities with improved efficiency.`;
+    return '';
   }
 }
 

@@ -479,7 +479,7 @@ export function generateLegalBriefPDF(data: LegalBriefData): jsPDF {
   doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(30, 64, 175);
-  doc.text('IP SHIELD', PW / 2, y, { align: 'center' });
+  doc.text('Git-Patent', PW / 2, y, { align: 'center' });
   y += 28;
   doc.setFontSize(16);
   doc.setTextColor(0, 0, 0);
@@ -745,5 +745,5 @@ export function generateLegalBriefPDF(data: LegalBriefData): jsPDF {
 
 export function downloadLegalBrief(data: LegalBriefData): void {
   const pdf = generateLegalBriefPDF(data);
-  pdf.save(`IP_Shield_Legal_Brief_${data.title.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+  pdf.save(`Git_Patent_Legal_Brief_${data.title.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
 }

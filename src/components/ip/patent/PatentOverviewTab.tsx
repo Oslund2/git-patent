@@ -405,10 +405,10 @@ export function PatentOverviewTab({ application, onUpdate, onDelete, onNavigate 
             <h3 className="text-sm font-semibold text-gray-900 pb-4 border-b border-gray-100 mb-4">Section Progress</h3>
             <div className="space-y-3.5">
               {[
-                { label: 'Specification', progress: application.specification ? Math.min(countWords(application.specification) / 50, 100) : 0, color: 'bg-blue-500' },
+                { label: 'Specification', progress: application.specification ? Math.min((countWords(application.specification) / 1000) * 100, 100) : 0, color: 'bg-blue-500' },
                 { label: 'Claims', progress: application.claims.length > 0 ? 100 : 0, color: 'bg-indigo-500' },
                 { label: 'Drawings', progress: application.drawings.length > 0 ? 100 : 0, color: 'bg-violet-500' },
-                { label: 'Abstract', progress: application.abstract ? Math.min(countWords(application.abstract) / 1, 100) : 0, color: 'bg-emerald-500' },
+                { label: 'Abstract', progress: application.abstract ? Math.min((countWords(application.abstract) / 150) * 100, 100) : 0, color: 'bg-emerald-500' },
               ].map((section, i) => (
                 <div key={i}>
                   <div className="flex items-center justify-between mb-1.5">

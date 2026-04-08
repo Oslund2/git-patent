@@ -91,7 +91,7 @@ async function fetchBlobContent(owner: string, repo: string, sha: string, token?
   const data = await response.json();
   if (data.encoding === 'base64') {
     try {
-      return atob(data.content.replace(/\n/g, ''));
+      return decodeBase64Utf8(data.content);
     } catch {
       return null; // binary file
     }
@@ -142,8 +142,22 @@ export async function fetchRepoFiles(
 }
 
 /**
+ * Decode base64-encoded UTF-8 content from GitHub API responses.
+ * Uses TextDecoder to properly handle multi-byte UTF-8 characters
+ * (emoji, accented chars, etc.) that atob() mangles.
+ */
+function decodeBase64Utf8(base64: string): string {
+  const cleaned = base64.replace(/[\n\r\s]/g, '');
+  const binary = atob(cleaned);
+  const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+/**
  * Fetch README.md content from a GitHub repo.
- * Tries README.md, readme.md, README, README.rst in order.
+ * Strategy 1: GitHub's dedicated /readme API endpoint.
+ * Strategy 2: Search repo tree for common README filenames.
+ * Strategy 3: Fetch raw README.md directly from the branch.
  */
 export async function fetchReadmeContent(
   owner: string,
@@ -161,13 +175,19 @@ export async function fetchReadmeContent(
       const readmeData = await readmeResponse.json();
       if (readmeData.encoding === 'base64' && readmeData.content) {
         try {
-          const content = atob(readmeData.content.replace(/\n/g, ''));
+          const content = decodeBase64Utf8(readmeData.content);
           if (content && content.length > 0) {
             console.log(`README fetched via API (${content.length} chars)`);
             return content.substring(0, 10000);
           }
-        } catch { /* fall through to tree strategy */ }
+        } catch (decodeErr) {
+          console.warn('README API base64 decode failed, trying tree strategy:', decodeErr);
+        }
+      } else {
+        console.warn(`README API returned unexpected encoding: ${readmeData.encoding}`);
       }
+    } else {
+      console.warn(`README API returned ${readmeResponse.status} for ${owner}/${repo}`);
     }
 
     // Strategy 2: Fall back to tree search with case-insensitive matching
@@ -176,15 +196,29 @@ export async function fetchReadmeContent(
       const name = entry.path.split('/').pop() || '';
       return /^readme(\.(md|txt|rst|markdown))?$/i.test(name) && !entry.path.includes('/');
     });
-    if (!readmeEntry) {
-      console.warn(`No README found in repo tree for ${owner}/${repo}`);
-      return null;
+    if (readmeEntry) {
+      const content = await fetchBlobContent(owner, repo, readmeEntry.sha, token);
+      if (content) {
+        console.log(`README fetched via tree (${content.length} chars, path: ${readmeEntry.path})`);
+        return content.substring(0, 10000);
+      }
     }
-    const content = await fetchBlobContent(owner, repo, readmeEntry.sha, token);
-    if (content) {
-      console.log(`README fetched via tree (${content.length} chars, path: ${readmeEntry.path})`);
+
+    // Strategy 3: Try raw content URL as last resort
+    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`;
+    const rawResponse = await fetch(rawUrl, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (rawResponse.ok) {
+      const content = await rawResponse.text();
+      if (content && content.length > 0) {
+        console.log(`README fetched via raw URL (${content.length} chars)`);
+        return content.substring(0, 10000);
+      }
     }
-    return content ? content.substring(0, 10000) : null;
+
+    console.warn(`No README found for ${owner}/${repo} (all 3 strategies exhausted)`);
+    return null;
   } catch (err) {
     console.error('README fetch failed:', err);
     return null;

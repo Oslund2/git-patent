@@ -3,14 +3,6 @@ import { createPatentDrawing, deleteAllDrawingsForApplication } from './patentAp
 import type { PatentDrawing, DrawingCallout } from './patentApplicationService';
 import type { ExtractedFeature } from '../../types';
 import { analyzeDomain, planDrawingFigures, type DrawingSpec } from './dynamicPatentDrawingsService';
-import { generateSystemArchitecture } from './architectureDiagramGenerator';
-import {
-  generateAlgorithmFlowchart,
-  generateDataStructureDiagram,
-  generateIntegrationDiagram,
-  generateWorkflowDiagram,
-  generateUIWireframe
-} from './featureSpecificDiagramGenerator';
 import { generateText } from '../ai/geminiService';
 
 interface BlockElement {
@@ -45,7 +37,8 @@ interface DiagramDefinition {
   height: number;
 }
 
-// Generic fallback figure definitions for any software codebase
+// Legacy static figure definitions — kept for type compatibility but no longer used in generation.
+// All drawings are now AI-generated from actual codebase features.
 const FIGURE_DEFINITIONS: DiagramDefinition[] = [
   {
     figureNumber: 1,
@@ -475,8 +468,8 @@ export async function generateDrawingsForApplication(
     console.log(`Found ${features.length} features from codebase analysis`);
 
     if (features.length === 0) {
-      console.warn('No features found, using fallback static drawings');
-      return await generateStaticDrawings(applicationId);
+      console.warn('No features found — skipping drawing generation (no static fallback)');
+      return [];
     }
 
     const domainAnalysis = analyzeDomain(features);
@@ -558,8 +551,8 @@ export async function generateDrawingsForApplication(
     return drawings;
 
   } catch (error) {
-    console.error('Feature extraction or planning failed, falling back to static drawings:', error);
-    return await generateStaticDrawings(applicationId);
+    console.error('Feature extraction or planning failed — returning empty drawings (no static fallback):', error);
+    return [];
   }
 }
 
@@ -630,38 +623,10 @@ export async function regenerateSingleDrawing(
   }
 }
 
-async function generateStaticDrawings(applicationId: string): Promise<PatentDrawing[]> {
-  const drawings: PatentDrawing[] = [];
-
-  console.log('Generating fallback static drawings');
-
-  for (const def of FIGURE_DEFINITIONS) {
-    try {
-      const svg = generateSVG(def);
-      const callouts = extractCallouts(def);
-
-      const drawing = await createPatentDrawing(applicationId, {
-        figure_number: def.figureNumber,
-        title: def.title,
-        description: def.description,
-        svg_content: svg,
-        image_url: null,
-        drawing_type: def.drawingType,
-        callouts
-      });
-
-      drawings.push(drawing);
-    } catch (error) {
-      console.error(`Failed to generate static Figure ${def.figureNumber}:`, error);
-    }
-  }
-
-  return drawings;
-}
-
 /**
- * Attempt to generate a patent diagram using AI.
- * Returns null if AI generation fails (caller should fall back to templates).
+ * Generate a patent diagram using AI from actual extracted features.
+ * Returns null only if generation truly fails after best effort.
+ * No static or template fallback — every diagram must reflect the real codebase.
  */
 async function generateDiagramWithAI(
   spec: DrawingSpec,
@@ -669,21 +634,20 @@ async function generateDiagramWithAI(
   baseCalloutNumber: number
 ): Promise<{ svg: string; callouts: DrawingCallout[] } | null> {
   try {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) return null;
-
     const featureDescriptions = spec.sourceFeatures
       .map(f => `- ${f.name}: ${f.description} (type: ${f.type})`)
       .join('\n');
 
-    const prompt = `You are a patent illustrator. Generate a clean, professional SVG diagram for a patent application figure.
+    const prompt = `You are a patent illustrator generating SVG diagrams for USPTO patent applications.
+
+CRITICAL: Every element in this diagram MUST correspond to an actual feature extracted from the codebase. Do NOT invent, fabricate, or add generic placeholder components. If a feature is not listed below, it must NOT appear in the diagram. No output is better than a false output.
 
 FIGURE: FIG. ${spec.figureNumber} — ${spec.title}
 TYPE: ${spec.drawingType}
 DESCRIPTION: ${spec.description}
 
-COMPONENTS TO INCLUDE:
-${featureDescriptions || '- System overview showing key modules and their interactions'}
+ACTUAL CODEBASE COMPONENTS (use ONLY these):
+${featureDescriptions}
 
 REQUIREMENTS:
 1. Output valid SVG markup (xmlns="http://www.w3.org/2000/svg")
@@ -696,6 +660,7 @@ REQUIREMENTS:
 8. Colors: Use #EFF6FF fill with #2563EB stroke for core innovation components, #F9FAFB fill with #6B7280 stroke for support components, #F0FDF4 fill with #059669 stroke for external services
 9. Minimum stroke width: 2px
 10. Include a title at the bottom: "FIG. ${spec.figureNumber} — ${spec.title}"
+11. ONLY depict components and relationships that exist in the features listed above — do NOT add generic modules like "Database", "Auth", "Cache" unless they are explicitly listed
 
 ${spec.drawingType === 'flowchart' ? 'Use diamond shapes for decision points, rounded rectangles for start/end, rectangles for process steps. Flow should go top-to-bottom.' : ''}
 ${spec.drawingType === 'block_diagram' ? 'Use rectangles for components with directional arrows showing relationships. Group related components visually.' : ''}
@@ -763,9 +728,6 @@ export async function enhanceCalloutDescriptions(
   claims: string[]
 ): Promise<DrawingCallout[]> {
   try {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) return callouts;
-
     const calloutList = callouts.map(c =>
       `- Ref ${c.number}: "${c.label}" — ${c.description}`
     ).join('\n');
@@ -816,49 +778,11 @@ async function generateDiagramForSpec(
 ): Promise<{ svg: string; callouts: DrawingCallout[] }> {
   const baseCalloutNumber = spec.figureNumber * 100;
 
-  // Try AI-powered generation first (for non-architecture diagrams)
-  if (spec.figureNumber !== 1) {
-    const aiResult = await generateDiagramWithAI(spec, features, baseCalloutNumber);
-    if (aiResult) return aiResult;
-    console.log(`Falling back to template generation for FIG. ${spec.figureNumber}`);
-  }
+  // All drawings must be AI-generated from actual features — no static/template fallback
+  const aiResult = await generateDiagramWithAI(spec, features, baseCalloutNumber);
+  if (aiResult) return aiResult;
 
-  if (spec.figureNumber === 1) {
-    const isOverview = spec.subFigureLetter === 'a';
-    const arch = generateSystemArchitecture(
-      features,
-      spec.requiresSplit,
-      isOverview,
-      spec.subFigureLetter
-    );
-    return { svg: arch.svg, callouts: arch.callouts };
-  }
-
-  if (spec.drawingType === 'flowchart' && spec.sourceFeatures.length === 1) {
-    return generateAlgorithmFlowchart(spec.sourceFeatures[0], spec.figureNumber, baseCalloutNumber);
-  }
-
-  if (spec.drawingType === 'block_diagram') {
-    if (spec.title.includes('Data Structure')) {
-      return generateDataStructureDiagram(spec.sourceFeatures, spec.figureNumber, baseCalloutNumber);
-    }
-    if (spec.title.includes('Integration')) {
-      return generateIntegrationDiagram(spec.sourceFeatures, spec.figureNumber, baseCalloutNumber);
-    }
-    if (spec.sourceFeatures.length === 1 && spec.sourceFeatures[0].type === 'algorithm') {
-      return generateAlgorithmFlowchart(spec.sourceFeatures[0], spec.figureNumber, baseCalloutNumber);
-    }
-  }
-
-  if (spec.drawingType === 'wireframe') {
-    return generateUIWireframe(spec.sourceFeatures, spec.figureNumber, baseCalloutNumber);
-  }
-
-  if (spec.title.includes('Workflow')) {
-    return generateWorkflowDiagram(spec.sourceFeatures, spec.figureNumber, baseCalloutNumber);
-  }
-
-  return generateDataStructureDiagram(spec.sourceFeatures, spec.figureNumber, baseCalloutNumber);
+  throw new Error(`AI drawing generation failed for FIG. ${spec.figureNumber} — no static fallback allowed`);
 }
 
 function extractErrorInfo(error: any): { message: string; details: any } {
