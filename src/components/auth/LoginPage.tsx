@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, Mail, Lock, ArrowRight, Zap, FileText, Search, BarChart3, CheckCircle } from 'lucide-react';
+import { Shield, Mail, Lock, ArrowRight, FileText, Search, BarChart3, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface LoginPageProps {
@@ -7,7 +7,7 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onToggleSignUp }: LoginPageProps) {
-  const { signIn, signInAsGuest } = useAuth();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -123,24 +123,7 @@ export function LoginPage({ onToggleSignUp }: LoginPageProps) {
             <p className="text-sm text-gray-500 mt-1">to continue to your dashboard</p>
           </div>
 
-          <button
-            onClick={() => signInAsGuest()}
-            className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-patent-600 to-indigo-600 text-white font-semibold py-3.5 px-4 rounded-xl hover:shadow-lg hover:shadow-patent-600/25 transition-all mb-3 text-sm"
-          >
-            <Zap className="w-4 h-4" />
-            Get Started — No Account Needed
-          </button>
-
           {/* GitHub OAuth button — dormant until provider is configured */}
-
-          <div className="relative mb-5">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="px-3 bg-white text-xs text-gray-400">or sign in with email</span>
-            </div>
-          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

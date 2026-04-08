@@ -33,7 +33,7 @@ const STEP_CONFIG = [
 ];
 
 export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
-  const { user, session, isGuest } = useAuth();
+  const { user, session } = useAuth();
   const { createProject, updateProject } = useProject();
   const { isInternalUser, initiateCheckout } = usePaymentGate();
   const [sourceType, setSourceType] = useState<'github' | 'zip'>('github');
@@ -187,8 +187,8 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
 
   /** Payment gate — returns true if we should proceed, false if redirecting to Stripe */
   const checkPaymentGate = async (projectName: string): Promise<boolean> => {
-    // Internal users and guests bypass payment
-    if (isInternalUser() || isGuest) return true;
+    // Internal users (@scripps.com) bypass payment
+    if (isInternalUser()) return true;
 
     // External user — redirect to Stripe checkout
     // Create a temporary project to track the payment
@@ -218,7 +218,7 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
 
     // Payment gate for external users
     const projectName = repoUrl.split('/').slice(-2).join('/');
-    if (!isInternalUser() && !isGuest) {
+    if (!isInternalUser()) {
       setLoading(true);
       try {
         const proceed = await checkPaymentGate(projectName);
@@ -315,7 +315,7 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
 
     // Payment gate for external users
     const projectName = zipFile.name.replace(/\.zip$/i, '');
-    if (!isInternalUser() && !isGuest) {
+    if (!isInternalUser()) {
       setLoading(true);
       try {
         const proceed = await checkPaymentGate(projectName);
@@ -585,15 +585,15 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
               onClick={handleGitHubAnalysis}
               disabled={loading || !repoUrl.trim()}
               className={`w-full flex items-center justify-center gap-2 text-white font-semibold py-3.5 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base ${
-                isInternalUser() || isGuest
+                isInternalUser()
                   ? 'bg-gradient-to-r from-patent-600 to-indigo-600 hover:shadow-lg hover:shadow-patent-600/25'
                   : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:shadow-lg hover:shadow-violet-600/25'
               }`}
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : isInternalUser() || isGuest ? <ArrowRight className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
-              {loading ? 'Analyzing...' : isInternalUser() || isGuest ? 'Analyze Repository' : 'Pay & Analyze Repository'}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : isInternalUser() ? <ArrowRight className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
+              {loading ? 'Analyzing...' : isInternalUser() ? 'Analyze Repository' : 'Pay & Analyze Repository'}
             </button>
-            {!isInternalUser() && !isGuest && (
+            {!isInternalUser() && (
               <div className="flex items-center justify-center gap-1.5 mt-2 text-xs text-gray-400">
                 <Lock className="w-3 h-3" />
                 <span>Secure payment via Stripe — one-time charge per project</span>
@@ -728,15 +728,15 @@ export function CodebaseUpload({ onAnalysisComplete }: CodebaseUploadProps) {
               onClick={handleZipAnalysis}
               disabled={loading || !zipFile}
               className={`w-full flex items-center justify-center gap-2 text-white font-semibold py-3.5 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base ${
-                isInternalUser() || isGuest
+                isInternalUser()
                   ? 'bg-gradient-to-r from-violet-600 to-purple-600 hover:shadow-lg hover:shadow-violet-600/25'
                   : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:shadow-lg hover:shadow-violet-600/25'
               }`}
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : isInternalUser() || isGuest ? <ArrowRight className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
-              {loading ? 'Analyzing...' : isInternalUser() || isGuest ? 'Analyze Codebase' : 'Pay & Analyze Codebase'}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : isInternalUser() ? <ArrowRight className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
+              {loading ? 'Analyzing...' : isInternalUser() ? 'Analyze Codebase' : 'Pay & Analyze Codebase'}
             </button>
-            {!isInternalUser() && !isGuest && (
+            {!isInternalUser() && (
               <div className="flex items-center justify-center gap-1.5 mt-2 text-xs text-gray-400">
                 <Lock className="w-3 h-3" />
                 <span>Secure payment via Stripe — one-time charge per project</span>

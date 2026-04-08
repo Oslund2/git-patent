@@ -13,19 +13,19 @@ const INTERNAL_DOMAINS = (import.meta.env.VITE_INTERNAL_DOMAINS || '')
   .filter(Boolean);
 
 export function usePaymentGate() {
-  const { user, isGuest } = useAuth();
+  const { user } = useAuth();
   const [checking, setChecking] = useState(false);
 
   /** Quick client-side check — for UX hints only, NOT for enforcement */
   const isInternalUser = useCallback((): boolean => {
-    if (isGuest || !user?.email) return false;
+    if (!user?.email) return false;
     const domain = user.email.split('@')[1]?.toLowerCase() || '';
     return INTERNAL_DOMAINS.includes(domain);
-  }, [user, isGuest]);
+  }, [user]);
 
   /** Server-side payment check — authoritative */
   const checkPaymentStatus = useCallback(async (projectId?: string): Promise<PaymentStatus> => {
-    if (isGuest || !user?.email) {
+    if (!user?.email) {
       return { isInternal: false, isPaid: false, requiresPayment: true };
     }
 
@@ -57,7 +57,7 @@ export function usePaymentGate() {
     } finally {
       setChecking(false);
     }
-  }, [user, isGuest, isInternalUser]);
+  }, [user, isInternalUser]);
 
   /** Create a Stripe Checkout session and redirect */
   const initiateCheckout = useCallback(async (
