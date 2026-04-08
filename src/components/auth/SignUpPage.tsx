@@ -200,13 +200,13 @@ export function SignUpPage({ onToggleLogin }: SignUpPageProps) {
               <span className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
                 <span className="w-2.5 h-2.5 rounded-full bg-violet-500" />
               </span>
-              Copyright registration ready
+              Prior art search & novelty analysis
             </div>
             <div className="flex items-center gap-3 text-sm text-gray-500">
               <span className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
               </span>
-              Trademark identification
+              USPTO-format PDF export
             </div>
           </div>
         </div>

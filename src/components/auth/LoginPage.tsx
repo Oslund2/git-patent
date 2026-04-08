@@ -47,7 +47,7 @@ export function LoginPage({ onToggleSignUp }: LoginPageProps) {
             <h1 className="text-4xl font-bold text-gray-900">Git-Patent</h1>
           </div>
           <p className="text-lg text-gray-500 leading-relaxed mb-10">
-            Turn your source code into USPTO-ready patent applications, copyright registrations, and trademark filings — powered by AI.
+            Turn your source code into USPTO-ready patent applications — AI-powered specification, claims, drawings, and prior art search.
           </p>
 
           {/* Two-column layout: deliverables + pricing */}
