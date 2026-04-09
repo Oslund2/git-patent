@@ -1,5 +1,7 @@
-import { FolderGit2, Clock, CheckCircle, AlertCircle, Loader2, Trash2, Plus, GitFork, FolderArchive } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { FolderGit2, Clock, CheckCircle, AlertCircle, Loader2, Trash2, Plus, GitFork, FolderArchive, Shield } from 'lucide-react';
 import { useProject } from '../../contexts/ProjectContext';
+import { getStrengthStyle } from '../../services/patent/patentStrengthService';
 import type { Project } from '../../types';
 
 interface ProjectListProps {
@@ -16,6 +18,18 @@ const STATUS_CONFIG = {
 
 export function ProjectList({ onSelectProject, onNewProject }: ProjectListProps) {
   const { projects, loading, deleteProject } = useProject();
+  const [sortBy, setSortBy] = useState<'recent' | 'strength'>('recent');
+
+  const sortedProjects = useMemo(() => {
+    if (sortBy === 'strength') {
+      return [...projects].sort((a, b) => {
+        const scoreA = a.patent_strength_score ?? -1;
+        const scoreB = b.patent_strength_score ?? -1;
+        return scoreB - scoreA;
+      });
+    }
+    return projects;
+  }, [projects, sortBy]);
 
   if (loading) {
     return (
@@ -36,12 +50,32 @@ export function ProjectList({ onSelectProject, onNewProject }: ProjectListProps)
               : 'Get started by analyzing your first codebase'}
           </p>
         </div>
-        <button
-          onClick={onNewProject}
-          className="flex items-center gap-2 bg-gradient-to-r from-patent-600 to-indigo-600 text-white px-6 py-3 rounded-xl hover:shadow-lg hover:shadow-patent-600/25 transition-all font-semibold text-base"
-        >
-          <Plus className="w-5 h-5" /> New Analysis
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+            <button
+              onClick={() => setSortBy('recent')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                sortBy === 'recent' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Recent
+            </button>
+            <button
+              onClick={() => setSortBy('strength')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                sortBy === 'strength' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Strongest
+            </button>
+          </div>
+          <button
+            onClick={onNewProject}
+            className="flex items-center gap-2 bg-gradient-to-r from-patent-600 to-indigo-600 text-white px-6 py-3 rounded-xl hover:shadow-lg hover:shadow-patent-600/25 transition-all font-semibold text-base"
+          >
+            <Plus className="w-5 h-5" /> New Analysis
+          </button>
+        </div>
       </div>
 
       {projects.length === 0 ? (
@@ -56,7 +90,7 @@ export function ProjectList({ onSelectProject, onNewProject }: ProjectListProps)
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {projects.map((project) => {
+          {sortedProjects.map((project) => {
             const status = STATUS_CONFIG[project.analysis_status];
             const StatusIcon = status.icon;
 
@@ -97,6 +131,14 @@ export function ProjectList({ onSelectProject, onNewProject }: ProjectListProps)
                       <StatusIcon className={`w-3.5 h-3.5 ${(status as Record<string, unknown>).animate ? 'animate-spin' : ''}`} />
                       {status.label}
                     </span>
+                    {project.patent_strength_score != null && (
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold ${
+                        getStrengthStyle(project.patent_strength_score).bg
+                      } ${getStrengthStyle(project.patent_strength_score).text}`}>
+                        <Shield className="w-3 h-3" />
+                        {Math.round(project.patent_strength_score)}
+                      </span>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -117,6 +159,20 @@ export function ProjectList({ onSelectProject, onNewProject }: ProjectListProps)
 
                 {project.analysis_summary && (
                   <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">{project.analysis_summary}</p>
+                )}
+
+                {project.analysis_status === 'completed' && project.patent_strength_score != null && (
+                  <div className="mt-3 flex items-center gap-2.5">
+                    <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                      <div
+                        className={`h-1.5 rounded-full transition-all duration-700 ${getStrengthStyle(project.patent_strength_score).bar}`}
+                        style={{ width: `${project.patent_strength_score}%` }}
+                      />
+                    </div>
+                    <span className={`text-xs font-medium whitespace-nowrap ${getStrengthStyle(project.patent_strength_score).text}`}>
+                      {getStrengthStyle(project.patent_strength_score).label}
+                    </span>
+                  </div>
                 )}
 
                 {/* Status dot animation for analyzing */}

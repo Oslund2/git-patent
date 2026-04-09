@@ -13,6 +13,7 @@ import type { ExtractedFeature } from '../patent/patentFeatureExtractionService'
 import { createPatentApplication } from '../patent/patentApplicationService';
 import { generateCompletePatentApplication } from '../patent/patentWorkflowOrchestrator';
 import type { InnovationCluster, IPOrchestrationProgress, IPAnalysisResult } from '../../types';
+import { recalculatePatentStrength } from '../patent/patentStrengthService';
 
 // ---------------------------------------------------------------------------
 // Applicant info passed from the upload form
@@ -509,6 +510,10 @@ export async function runFullIPAnalysis(
       .from('projects')
       .update({ source_metadata: updatedMeta })
       .eq('id', projectId);
+
+    // Calculate and persist patent strength score
+    reportProgress(onProgress, 'complete', 'Calculating patent strength...', 97);
+    await recalculatePatentStrength(projectId);
 
     reportProgress(
       onProgress,

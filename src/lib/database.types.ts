@@ -16,6 +16,8 @@ export interface Database {
           analysis_status: 'pending' | 'analyzing' | 'completed' | 'failed';
           analysis_summary: string | null;
           analysis_completed_at: string | null;
+          patent_strength_score: number | null;
+          patent_strength_rating: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -30,6 +32,8 @@ export interface Database {
           analysis_status?: string;
           analysis_summary?: string | null;
           analysis_completed_at?: string | null;
+          patent_strength_score?: number | null;
+          patent_strength_rating?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -44,6 +48,8 @@ export interface Database {
           analysis_status?: string;
           analysis_summary?: string | null;
           analysis_completed_at?: string | null;
+          patent_strength_score?: number | null;
+          patent_strength_rating?: string | null;
           created_at?: string;
           updated_at?: string;
         };

@@ -80,6 +80,8 @@ export interface Project {
   analysis_completed_at: string | null;
   payment_status: 'not_required' | 'pending' | 'paid';
   stripe_session_id: string | null;
+  patent_strength_score: number | null;
+  patent_strength_rating: 'strong' | 'moderate' | 'weak' | null;
   created_at: string;
   updated_at: string;
 }
