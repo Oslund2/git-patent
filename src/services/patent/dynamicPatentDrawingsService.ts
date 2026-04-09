@@ -51,6 +51,15 @@ export function planDrawingFigures(
   const systemComponents = estimateSystemComponents(features);
   const needsSplit = systemComponents > 15;
 
+  // Cap features for Figure 1 to avoid exceeding AI output token limits.
+  // Prioritize core innovations, then strong novelty, then moderate.
+  const MAX_ARCH_FEATURES = 12;
+  const archFeatures = [
+    ...features.filter(f => f.isCoreInnovation),
+    ...features.filter(f => !f.isCoreInnovation && f.noveltyStrength === 'strong'),
+    ...features.filter(f => !f.isCoreInnovation && f.noveltyStrength !== 'strong'),
+  ].slice(0, MAX_ARCH_FEATURES);
+
   if (needsSplit) {
     specs.push({
       figureNumber: 1,
@@ -58,7 +67,7 @@ export function planDrawingFigures(
       title: 'High-Level System Architecture Overview',
       description: `FIG. 1a is a block diagram illustrating the high-level system architecture overview showing major subsystems of the software system according to an embodiment of the present invention.`,
       drawingType: 'block_diagram',
-      sourceFeatures: features,
+      sourceFeatures: archFeatures,
       estimatedComplexity: 'moderate',
       requiresSplit: true
     });
@@ -69,7 +78,7 @@ export function planDrawingFigures(
       title: 'Detailed Component Architecture',
       description: `FIG. 1b is a block diagram illustrating the detailed component architecture with internal modules and processing engines of the software system according to an embodiment of the present invention.`,
       drawingType: 'block_diagram',
-      sourceFeatures: features,
+      sourceFeatures: archFeatures,
       estimatedComplexity: 'complex',
       requiresSplit: true
     });
@@ -80,7 +89,7 @@ export function planDrawingFigures(
       title: 'Integrated System Architecture',
       description: `FIG. 1 is a block diagram illustrating the integrated system architecture of the software system according to an embodiment of the present invention.`,
       drawingType: 'block_diagram',
-      sourceFeatures: features,
+      sourceFeatures: archFeatures,
       estimatedComplexity: systemComponents > 10 ? 'moderate' : 'simple',
       requiresSplit: false
     });
