@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, Mail, Lock, ArrowRight, FileText, Search, BarChart3, CheckCircle } from 'lucide-react';
+import { Shield, Mail, Lock, ArrowRight, FileText, Search, BarChart3, CheckCircle, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface LoginPageProps {
@@ -103,6 +103,40 @@ export function LoginPage({ onToggleSignUp, onTerms }: LoginPageProps) {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* The unfiled IP gap — funnel visualization */}
+          <div className="mt-10">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <TrendingUp className="w-3.5 h-3.5" />
+              The unfiled IP gap
+            </h3>
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/80 p-5">
+              <div className="space-y-2.5">
+                {[
+                  { value: '1B', label: 'GitHub repositories', bar: '100%', color: 'bg-gray-300' },
+                  { value: '150M', label: 'Unique projects (excl. forks & mirrors)', bar: '15%', color: 'bg-blue-300' },
+                  { value: '15M', label: 'Contain novel technical methods', bar: '6%', color: 'bg-indigo-400' },
+                  { value: '5M', label: 'Meet utility patent criteria', bar: '3%', color: 'bg-patent-500' },
+                  { value: '<500K', label: 'Actually filed per year', bar: '1%', color: 'bg-red-400' },
+                ].map((row, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-gray-900 w-14 text-right flex-shrink-0">
+                      {row.value}
+                    </span>
+                    <div className="flex-1">
+                      <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div className={`h-2 rounded-full ${row.color}`} style={{ width: row.bar }} />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">{row.label}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400 mt-4 pt-3 border-t border-gray-100">
+                For every patent filed, ~20 patentable projects go unprotected. Estimated unfiled IP value: $50B+.
+              </p>
             </div>
           </div>
         </div>

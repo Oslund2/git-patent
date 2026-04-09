@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Search, Sparkles, Shield, CheckCircle, CreditCard, Loader2, PenTool, Download } from 'lucide-react';
+import { FileText, Search, Sparkles, Shield, CheckCircle, CreditCard, Loader2, PenTool, Download, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePaymentGate } from '../../hooks/usePaymentGate';
 
@@ -83,6 +83,33 @@ export function PricingGate({ onInternalBypass }: PricingGateProps) {
         <p className="text-base text-gray-500 mt-3 max-w-lg mx-auto">
           Transform your codebase into a complete, USPTO-ready patent application in minutes
         </p>
+      </div>
+
+      {/* Why patent now — urgency callout */}
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 mb-8">
+        <div className="flex items-start gap-3 mb-3">
+          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-900">Most software IP is never protected</p>
+            <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+              Of 5M+ repositories that meet patent criteria, fewer than 500K software patents are filed annually.
+              46% of public repositories have no license at all — leaving novel IP unprotected by default.
+              AI code generation tools are accelerating this gap faster than IP law can adapt.
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4 mt-3 pt-3 border-t border-amber-200/60">
+          {[
+            { value: '5M+', label: 'Patentable repos' },
+            { value: '<500K', label: 'Patents filed/yr' },
+            { value: '$50B+', label: 'Unfiled IP value' },
+          ].map((stat, i) => (
+            <div key={i} className="text-center">
+              <p className="text-lg font-bold text-amber-900">{stat.value}</p>
+              <p className="text-xs text-amber-700">{stat.label}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">

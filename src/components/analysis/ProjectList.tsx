@@ -87,6 +87,20 @@ export function ProjectList({ onSelectProject, onNewProject }: ProjectListProps)
           <p className="text-base text-gray-500 max-w-sm mx-auto">
             Connect a GitHub repository to discover patentable innovations, copyrightable works, and trademarks
           </p>
+          <div className="flex items-center justify-center gap-8 mt-6">
+            {[
+              { value: '5M+', label: 'Patentable repos on GitHub' },
+              { value: '20:1', label: 'Unfiled to filed ratio' },
+            ].map((stat, i) => (
+              <div key={i} className="text-center">
+                <p className="text-2xl font-bold text-patent-600">{stat.value}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-sm text-gray-400 mt-4 max-w-xs mx-auto">
+            Your repo could be one of them. Run your first analysis to find out.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

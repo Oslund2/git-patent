@@ -178,7 +178,7 @@ export function SignUpPage({ onToggleLogin, onTerms }: SignUpPageProps) {
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Git-Patent</h1>
           <p className="text-lg text-gray-500 leading-relaxed">
-            Join thousands of developers protecting their innovations. AI-powered IP analysis at your fingertips.
+            5 million GitHub repositories meet patent criteria. Fewer than 500,000 software patents are filed each year. Most innovation ships unprotected.
           </p>
           <div className="mt-10 grid grid-cols-1 gap-4 text-left max-w-xs mx-auto">
             <div className="flex items-center gap-3 text-sm text-gray-500">
@@ -199,6 +199,20 @@ export function SignUpPage({ onToggleLogin, onTerms }: SignUpPageProps) {
               </span>
               USPTO-format PDF export
             </div>
+          </div>
+
+          {/* Market stats */}
+          <div className="mt-8 grid grid-cols-3 gap-3 max-w-sm mx-auto">
+            {[
+              { value: '20:1', label: 'Unfiled to filed ratio' },
+              { value: '46%', label: 'Public repos with no license' },
+              { value: '$50B+', label: 'Estimated unfiled IP value' },
+            ].map((stat, i) => (
+              <div key={i} className="text-center">
+                <p className="text-xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
