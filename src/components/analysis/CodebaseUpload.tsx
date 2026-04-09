@@ -729,6 +729,16 @@ export function CodebaseUpload({ paidProjectId: paidProjectIdProp, paymentBanner
             />
           </div>
 
+          {/* Caution: do not close */}
+          {loading && (
+            <div className="flex items-center gap-2.5 mt-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+              <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              <p className="text-xs text-amber-800">
+                <span className="font-semibold">Caution:</span> The full pipeline can take up to 15 minutes. Do not close or navigate away from this page until the analysis is complete.
+              </p>
+            </div>
+          )}
+
           {/* Live metrics badges */}
           {Object.keys(metrics).length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">
