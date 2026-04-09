@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Shield, Mail, Lock, ArrowRight, FileText, Search, BarChart3, CheckCircle, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -13,6 +13,12 @@ export function LoginPage({ onToggleSignUp, onTerms }: LoginPageProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [barsAnimated, setBarsAnimated] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setBarsAnimated(true), 400);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,11 +121,11 @@ export function LoginPage({ onToggleSignUp, onTerms }: LoginPageProps) {
             <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/80 p-5">
               <div className="space-y-2.5">
                 {[
-                  { value: '1B', label: 'GitHub repositories', bar: '100%', color: 'bg-gray-300' },
-                  { value: '150M', label: 'Unique projects (excl. forks & mirrors)', bar: '15%', color: 'bg-blue-300' },
-                  { value: '15M', label: 'Contain novel technical methods', bar: '6%', color: 'bg-indigo-400' },
-                  { value: '5M', label: 'Meet utility patent criteria', bar: '3%', color: 'bg-patent-500' },
-                  { value: '<500K', label: 'Actually filed per year', bar: '1%', color: 'bg-red-400' },
+                  { value: '1B', label: 'GitHub repositories', bar: '100%', color: 'bg-gray-300', delay: 0 },
+                  { value: '150M', label: 'Unique projects (excl. forks & mirrors)', bar: '15%', color: 'bg-blue-300', delay: 150 },
+                  { value: '15M', label: 'Contain novel technical methods', bar: '6%', color: 'bg-indigo-400', delay: 300 },
+                  { value: '5M', label: 'Meet utility patent criteria', bar: '3%', color: 'bg-patent-500', delay: 450 },
+                  { value: '<500K', label: 'Actually filed per year', bar: '1%', color: 'bg-red-400', delay: 600 },
                 ].map((row, i) => (
                   <div key={i} className="flex items-center gap-3">
                     <span className="text-sm font-bold text-gray-900 w-14 text-right flex-shrink-0">
@@ -127,7 +133,14 @@ export function LoginPage({ onToggleSignUp, onTerms }: LoginPageProps) {
                     </span>
                     <div className="flex-1">
                       <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
-                        <div className={`h-2 rounded-full ${row.color}`} style={{ width: row.bar }} />
+                        <div
+                          className={`h-2 rounded-full ${row.color} transition-all ease-out`}
+                          style={{
+                            width: barsAnimated ? row.bar : '0%',
+                            transitionDuration: '800ms',
+                            transitionDelay: `${row.delay}ms`,
+                          }}
+                        />
                       </div>
                       <p className="text-xs text-gray-500 mt-0.5">{row.label}</p>
                     </div>
