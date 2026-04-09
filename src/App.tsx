@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Shield, LogOut, ChevronLeft, FolderGit2, ChevronRight } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProjectProvider, useProject } from './contexts/ProjectContext';
@@ -7,10 +7,13 @@ import { SignUpPage } from './components/auth/SignUpPage';
 import { CodebaseUpload } from './components/analysis/CodebaseUpload';
 import { ProjectList } from './components/analysis/ProjectList';
 import { IPDashboard } from './components/ip/IPDashboard';
+import { PricingGate } from './components/payment/PricingGate';
+import { PaymentBanner } from './components/payment/PaymentBanner';
 import { TermsOfService } from './components/legal/TermsOfService';
+import { usePaymentGate } from './hooks/usePaymentGate';
 import type { Project } from './types';
 
-type View = 'projects' | 'upload' | 'editor' | 'terms';
+type View = 'projects' | 'pricing' | 'upload' | 'editor' | 'terms';
 
 function Footer({ onTerms }: { onTerms: () => void }) {
   return (
@@ -29,8 +32,35 @@ function Footer({ onTerms }: { onTerms: () => void }) {
 function AppContent() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { currentProject, selectProject, refreshProjects } = useProject();
+  const { isInternalUser } = usePaymentGate();
   const [view, setView] = useState<View>('projects');
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [paidProjectId, setPaidProjectId] = useState<string | null>(null);
+  const [paymentBanner, setPaymentBanner] = useState<'success' | 'cancelled' | null>(null);
+
+  // Detect Stripe payment redirect at app level
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment');
+    const projectId = params.get('project_id');
+    if (paymentStatus === 'success' || paymentStatus === 'cancelled') {
+      // Clean up URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete('payment');
+      url.searchParams.delete('session_id');
+      url.searchParams.delete('project_id');
+      window.history.replaceState({}, '', url.pathname);
+
+      if (paymentStatus === 'success' && projectId) {
+        setPaidProjectId(projectId);
+        setPaymentBanner('success');
+        setView('upload');
+      } else if (paymentStatus === 'cancelled') {
+        setPaymentBanner('cancelled');
+        setView('projects');
+      }
+    }
+  }, []);
 
   if (authLoading) {
     return (
@@ -62,8 +92,17 @@ function AppContent() {
     refreshProjects();
   };
 
+  const handleNewProject = () => {
+    if (isInternalUser()) {
+      setView('upload');
+    } else {
+      setView('pricing');
+    }
+  };
+
   const viewLabels: Record<View, string | null> = {
     'projects': null,
+    'pricing': 'New Project',
     'upload': 'New Analysis',
     'editor': 'IP Editor',
     'terms': 'Terms of Service',
@@ -133,16 +172,31 @@ function AppContent() {
 
       {/* Main content */}
       <main className="max-w-6xl mx-auto px-6 py-8 flex-1">
+        {paymentBanner && view !== 'upload' && (
+          <div className="max-w-2xl mx-auto">
+            <PaymentBanner type={paymentBanner} onDismiss={() => setPaymentBanner(null)} />
+          </div>
+        )}
+
         {view === 'projects' && (
           <ProjectList
             onSelectProject={handleSelectProject}
-            onNewProject={() => setView('upload')}
+            onNewProject={handleNewProject}
           />
+        )}
+
+        {view === 'pricing' && (
+          <PricingGate onInternalBypass={() => setView('upload')} />
         )}
 
         {view === 'upload' && (
           <CodebaseUpload
+            paidProjectId={paidProjectId}
+            paymentBanner={paymentBanner}
+            onDismissBanner={() => setPaymentBanner(null)}
             onAnalysisComplete={(project) => {
+              setPaidProjectId(null);
+              setPaymentBanner(null);
               refreshProjects();
               selectProject(project);
               setView('editor');
