@@ -13,6 +13,12 @@ import { supabase } from '../../lib/supabase';
 export interface PatentStrength {
   score: number | null;
   rating: 'strong' | 'moderate' | 'weak' | null;
+  dimensions?: {
+    novelty_102: number;
+    non_obviousness_103: number;
+    technical_depth: number;
+    prior_art_differentiation: number;
+  } | null;
 }
 
 export function getStrengthRating(score: number): 'strong' | 'moderate' | 'weak' {
@@ -43,27 +49,54 @@ export async function recalculatePatentStrength(projectId: string): Promise<Pate
   }
 
   let bestScore = -1;
+  let bestDimensions: PatentStrength['dimensions'] = null;
 
   for (const app of apps) {
     const noveltyScore = Number(app.novelty_score) || 0;
     let approvalProbability = 0;
+    let dimensions: PatentStrength['dimensions'] = null;
 
-    // Try to fetch the approval_probability from the novelty analysis
     if (app.novelty_analysis_id) {
       const { data: analysis } = await (supabase as any)
         .from('patent_novelty_analyses')
-        .select('approval_probability')
+        .select('approval_probability, analysis_data')
         .eq('id', app.novelty_analysis_id)
         .maybeSingle();
 
       if (analysis?.approval_probability != null) {
         approvalProbability = Number(analysis.approval_probability);
       }
+
+      // Extract AI dimensional scores from analysis_data
+      const aiScores = analysis?.analysis_data?.ai_scores;
+      if (aiScores?.novelty_102 && aiScores?.non_obviousness_103 && aiScores?.technical_depth && aiScores?.prior_art_differentiation) {
+        dimensions = {
+          novelty_102: Number(aiScores.novelty_102.score) || 0,
+          non_obviousness_103: Number(aiScores.non_obviousness_103.score) || 0,
+          technical_depth: Number(aiScores.technical_depth.score) || 0,
+          prior_art_differentiation: Number(aiScores.prior_art_differentiation.score) || 0,
+        };
+      }
     }
 
-    const composite = 0.6 * noveltyScore + 0.4 * approvalProbability;
+    // Multi-factor composite when AI dimensions available
+    let composite: number;
+    if (dimensions) {
+      composite = (
+        0.35 * noveltyScore +
+        0.25 * approvalProbability +
+        0.15 * dimensions.non_obviousness_103 +
+        0.15 * dimensions.technical_depth +
+        0.10 * dimensions.prior_art_differentiation
+      );
+    } else {
+      // Fallback to original formula when no AI dimensions
+      composite = 0.6 * noveltyScore + 0.4 * approvalProbability;
+    }
+
     if (composite > bestScore) {
       bestScore = composite;
+      bestDimensions = dimensions;
     }
   }
 
@@ -79,5 +112,5 @@ export async function recalculatePatentStrength(projectId: string): Promise<Pate
     })
     .eq('id', projectId);
 
-  return { score, rating };
+  return { score, rating, dimensions: bestDimensions };
 }

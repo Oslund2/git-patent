@@ -30,6 +30,12 @@ interface NoveltyAnalysisData {
   novelty_weaknesses: string[];
   recommendations: string[];
   key_features: KeyFeature[];
+  ai_dimensional_scores?: {
+    novelty_102?: { score: number; reasoning: string };
+    non_obviousness_103?: { score: number; reasoning: string };
+    technical_depth?: { score: number; reasoning: string };
+    prior_art_differentiation?: { score: number; reasoning: string };
+  } | null;
 }
 
 interface ClaimAnalysis {
@@ -233,9 +239,9 @@ export function PatentAnalysisTab({
               </div>
               <div className="flex-1 grid grid-cols-2 gap-3">
                 <SubScoreCard label="Technical Depth" score={noveltyAnalysis.technical_depth_score} color="bg-blue-500" />
-                <SubScoreCard label="Uniqueness" score={noveltyAnalysis.implementation_uniqueness_score} color="bg-indigo-500" />
-                <SubScoreCard label="Commercial Viability" score={noveltyAnalysis.commercial_viability_score} color="bg-violet-500" />
-                <SubScoreCard label="Confidence" score={noveltyAnalysis.confidence_score * 100} color="bg-purple-500" />
+                <SubScoreCard label="Prior Art Distance" score={noveltyAnalysis.implementation_uniqueness_score} color="bg-indigo-500" />
+                <SubScoreCard label="Non-Obviousness" score={noveltyAnalysis.commercial_viability_score} color="bg-violet-500" />
+                <SubScoreCard label="Approval Probability" score={noveltyAnalysis.confidence_score * 100} color="bg-purple-500" />
               </div>
             </div>
           </div>
