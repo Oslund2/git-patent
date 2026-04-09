@@ -92,17 +92,17 @@ export function PricingGate({ onInternalBypass }: PricingGateProps) {
           <div>
             <p className="text-sm font-semibold text-amber-900">Most software IP is never protected</p>
             <p className="text-xs text-amber-700 mt-1 leading-relaxed">
-              Of 5M+ repositories that meet patent criteria, fewer than 500K software patents are filed annually.
+              Of an estimated 5M+ repositories that meet patent criteria, fewer than 500K software patents are filed annually.
               46% of public repositories have no license at all — leaving novel IP unprotected by default.
-              AI code generation tools are accelerating this gap faster than IP law can adapt.
+              AI code generation tools are accelerating this gap, and under current law AI cannot be listed as an inventor (<em>Thaler v. Vidal</em>, 2022).
             </p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4 mt-3 pt-3 border-t border-amber-200/60">
           {[
-            { value: '5M+', label: 'Patentable repos' },
+            { value: '~5M+', label: 'Est. patentable repos' },
             { value: '<500K', label: 'Patents filed/yr' },
-            { value: '$50B+', label: 'Unfiled IP value' },
+            { value: '$50B+', label: 'Est. unfiled IP value' },
           ].map((stat, i) => (
             <div key={i} className="text-center">
               <p className="text-lg font-bold text-amber-900">{stat.value}</p>

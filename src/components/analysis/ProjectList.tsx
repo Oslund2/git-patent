@@ -89,8 +89,8 @@ export function ProjectList({ onSelectProject, onNewProject }: ProjectListProps)
           </p>
           <div className="flex items-center justify-center gap-8 mt-6">
             {[
-              { value: '5M+', label: 'Patentable repos on GitHub' },
-              { value: '20:1', label: 'Unfiled to filed ratio' },
+              { value: '~5M+', label: 'Est. patentable repos on GitHub' },
+              { value: '~20:1', label: 'Est. unfiled to filed ratio' },
             ].map((stat, i) => (
               <div key={i} className="text-center">
                 <p className="text-2xl font-bold text-patent-600">{stat.value}</p>

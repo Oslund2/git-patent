@@ -121,11 +121,11 @@ export function LoginPage({ onToggleSignUp, onTerms }: LoginPageProps) {
             <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/80 p-5">
               <div className="space-y-2.5">
                 {[
-                  { value: '1B', label: 'GitHub repositories', bar: '100%', color: 'bg-gray-300', delay: 0 },
-                  { value: '150M', label: 'Unique projects (excl. forks & mirrors)', bar: '15%', color: 'bg-blue-300', delay: 150 },
-                  { value: '15M', label: 'Contain novel technical methods', bar: '6%', color: 'bg-indigo-400', delay: 300 },
-                  { value: '5M', label: 'Meet utility patent criteria', bar: '3%', color: 'bg-patent-500', delay: 450 },
-                  { value: '<500K', label: 'Actually filed per year', bar: '1%', color: 'bg-red-400', delay: 600 },
+                  { value: '1B', label: 'GitHub repositories (2025)', bar: '100%', color: 'bg-gray-300', delay: 0 },
+                  { value: '~150M', label: 'Est. unique projects (excl. forks & mirrors)', bar: '15%', color: 'bg-blue-300', delay: 150 },
+                  { value: '~15M', label: 'Est. containing novel technical methods', bar: '6%', color: 'bg-indigo-400', delay: 300 },
+                  { value: '~5M', label: 'Est. meeting utility patent criteria', bar: '3%', color: 'bg-patent-500', delay: 450 },
+                  { value: '<500K', label: 'Software patents filed annually (USPTO + WIPO)', bar: '1%', color: 'bg-red-400', delay: 600 },
                 ].map((row, i) => (
                   <div key={i} className="flex items-center gap-3">
                     <span className="text-sm font-bold text-gray-900 w-14 text-right flex-shrink-0">
@@ -148,7 +148,10 @@ export function LoginPage({ onToggleSignUp, onTerms }: LoginPageProps) {
                 ))}
               </div>
               <p className="text-xs text-gray-400 mt-4 pt-3 border-t border-gray-100">
-                For every patent filed, ~20 patentable projects go unprotected. Estimated unfiled IP value: $50B+.
+                Based on filing data, an estimated 20 patentable projects go unprotected for every patent filed. Estimated unfiled IP value: $50B+.
+              </p>
+              <p className="text-[10px] text-gray-300 mt-2 leading-relaxed">
+                Sources: <a href="https://github.blog/news-insights/octoverse/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-gray-400">GitHub Octoverse</a> (repo count), <a href="https://www.uspto.gov/dashboard/patents/overview.html" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-gray-400">USPTO Annual Report</a> (filing data), <a href="https://www.wipo.int/ipstats/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-gray-400">WIPO IP Statistics</a> (global filings), <a href="https://www.oceantomo.com/intangible-asset-market-value-study/" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-gray-400">Ocean Tomo</a> (IP valuation). Derived estimates are calculated, not directly measured.
               </p>
             </div>
           </div>
