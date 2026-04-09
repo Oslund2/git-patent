@@ -20,7 +20,10 @@ The goal is simple: if you wrote something worth protecting, the paperwork shoul
 - **Claims generation** — independent claims (method, system, computer-readable medium) and 8-15 dependent claims following USPTO requirements
 - **Patent drawings** — system architecture diagrams, algorithm flowcharts, data structure diagrams, integration diagrams, workflow diagrams, UI wireframes, and block diagrams in print-optimized SVG
 - **Prior art search** — two-phase search using the Serper API (Google Patents) followed by AI relevance analysis, similarity scoring, and blocking risk assessment
-- **Novelty analysis** — overall novelty score (0-100), feature-by-feature breakdown, approval probability estimation, and recommendations
+- **Multi-dimensional novelty analysis** — AI scores four patent dimensions (35 USC 102 Novelty, 35 USC 103 Non-Obviousness, Technical Depth, and Prior Art Differentiation) each with 0-100 scores and reasoning, blended with a heuristic safety net for calibrated results
+- **README-grounded scoring** — the analyzed repo's README serves as structured ground truth in scoring prompts, letting the AI compare the inventor's claimed functionality against extracted code features and prior art
+- **Independent approval probability** — five-factor model (novelty foundation, prior art landscape, specification completeness, Alice/101 eligibility, assessment quality) replaces simple novelty-derived estimates
+- **Patent strength composite** — multi-factor model weighting novelty, approval probability, non-obviousness, technical depth, and prior art differentiation when AI dimensions are available
 - **Differentiation analysis** — points of novelty, technical advantages, feature comparison matrix, design-around strategies, and non-obviousness arguments
 - **CPC classification** — AI-suggested Cooperative Patent Classification codes with confidence scores
 - **USPTO forms** — SB-16 Provisional Cover Sheet, Application Data Sheet (ADS), declaration forms, and micro-entity certification
@@ -83,7 +86,7 @@ Build with `npm run build:lib` — outputs `dist-lib/git-patent.es.js`.
 ## API Integrations
 
 ### Anthropic Claude API
-Core AI engine powering all generation tasks — specifications, claims, novelty analysis, feature extraction, CPC classification, and more. Feature-specific token limits range from 2,048 to 8,192.
+Core AI engine powering all generation tasks — specifications, claims, multi-dimensional novelty analysis, feature extraction, CPC classification, and more. Feature-specific token limits range from 2,048 to 8,192. The novelty analysis prompt requests structured scoring across four patent dimensions with calibrated anchors and README-grounded evaluation.
 
 - **Env var:** `VITE_ANTHROPIC_API_KEY`
 
