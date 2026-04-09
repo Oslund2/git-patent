@@ -17,11 +17,13 @@ import { PipelineTips } from './PipelineTips';
 import { PipelineInsights } from './PipelineInsights';
 import { FilingInfoWizard } from './FilingInfoWizard';
 import { PaymentBanner } from '../payment/PaymentBanner';
+import { usePaymentGate } from '../../hooks/usePaymentGate';
 
 interface CodebaseUploadProps {
   paidProjectId?: string | null;
   paymentBanner?: 'success' | 'cancelled' | null;
   onDismissBanner?: () => void;
+  onRequiresPayment?: () => void;
   onAnalysisComplete: (project: any) => void;
 }
 
@@ -34,9 +36,10 @@ const STEP_CONFIG = [
   { key: 'complete', label: 'Complete', icon: CheckCircle },
 ];
 
-export function CodebaseUpload({ paidProjectId: paidProjectIdProp, paymentBanner, onDismissBanner, onAnalysisComplete }: CodebaseUploadProps) {
+export function CodebaseUpload({ paidProjectId: paidProjectIdProp, paymentBanner, onDismissBanner, onRequiresPayment, onAnalysisComplete }: CodebaseUploadProps) {
   const { user, session } = useAuth();
   const { createProject, updateProject } = useProject();
+  const { checkPaymentStatus } = usePaymentGate();
   const [sourceType, setSourceType] = useState<'github' | 'zip'>('github');
   const [showTips, setShowTips] = useState(false);
   const [repoUrl, setRepoUrl] = useState('');
@@ -178,6 +181,15 @@ export function CodebaseUpload({ paidProjectId: paidProjectIdProp, paymentBanner
     setError('');
     setWarnings([]);
 
+    // Server-side payment enforcement — skip only if returning from Stripe with a paid project
+    if (!paidProjectId) {
+      const paymentStatus = await checkPaymentStatus();
+      if (paymentStatus.requiresPayment) {
+        onRequiresPayment?.();
+        return;
+      }
+    }
+
     const projectName = repoUrl.split('/').slice(-2).join('/');
 
     setLoading(true);
@@ -273,6 +285,15 @@ export function CodebaseUpload({ paidProjectId: paidProjectIdProp, paymentBanner
     if (!zipFile || !user) return;
     setError('');
     setWarnings([]);
+
+    // Server-side payment enforcement
+    if (!paidProjectId) {
+      const paymentStatus = await checkPaymentStatus();
+      if (paymentStatus.requiresPayment) {
+        onRequiresPayment?.();
+        return;
+      }
+    }
 
     const projectName = zipFile.name.replace(/\.zip$/i, '');
 

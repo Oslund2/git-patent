@@ -194,6 +194,7 @@ function AppContent() {
             paidProjectId={paidProjectId}
             paymentBanner={paymentBanner}
             onDismissBanner={() => setPaymentBanner(null)}
+            onRequiresPayment={() => setView('pricing')}
             onAnalysisComplete={(project) => {
               setPaidProjectId(null);
               setPaymentBanner(null);
