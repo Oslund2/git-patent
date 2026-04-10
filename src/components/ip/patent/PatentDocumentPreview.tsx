@@ -266,7 +266,7 @@ export function PatentDocumentPreview({ application, onUpdate }: PatentDocumentP
                       <p className="text-sm font-bold text-gray-700 mb-2">FIG. {d.figure_number} - {d.title}</p>
                       {d.svg_content && (
                         <div
-                          className="inline-block max-w-full border border-gray-200 rounded-lg p-2 bg-white"
+                          className="inline-block w-full max-w-[560px] border border-gray-200 rounded-lg p-2 bg-white [&>svg]:w-full [&>svg]:h-auto [&>svg]:max-h-[420px]"
                           dangerouslySetInnerHTML={{ __html: d.svg_content }}
                         />
                       )}

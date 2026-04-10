@@ -512,9 +512,31 @@ Respond with ONLY the JSON object.`;
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = getPageHeight(pdf);
       const margin = PDF_MARGINS.top;
+      const bottomLimit = pageHeight - PDF_MARGINS.bottom;
       const maxWidth = getMaxTextWidth(pdf);
+      const LINE_HT = 14;
+      const PARA_SPACE = 10;
       let yPos = margin;
 
+      // Helper: ensure space or add page
+      const ensureSpace = (needed: number) => {
+        if (yPos + needed > bottomLimit) {
+          pdf.addPage();
+          yPos = margin;
+        }
+      };
+
+      // Helper: render wrapped text with proper page breaks
+      const addText = (text: string) => {
+        const lines = pdf.splitTextToSize(text.trim(), maxWidth);
+        for (const line of lines) {
+          ensureSpace(LINE_HT);
+          pdf.text(line, margin, yPos);
+          yPos += LINE_HT;
+        }
+      };
+
+      // Title
       setPatentFont(pdf, 'bold');
       pdf.setFontSize(14);
       const titleLines = pdf.splitTextToSize(selectedApp.title.toUpperCase(), maxWidth);
@@ -524,6 +546,7 @@ Respond with ONLY the JSON object.`;
       });
       yPos += 12;
 
+      // Inventor info
       setPatentFont(pdf, 'normal');
       pdf.setFontSize(12);
       if (selectedApp.inventor_name) {
@@ -533,35 +556,38 @@ Respond with ONLY the JSON object.`;
       pdf.text(`Citizenship: ${selectedApp.inventor_citizenship}`, margin, yPos);
       yPos += 30;
 
+      // Abstract
       if (selectedApp.abstract) {
+        ensureSpace(40);
         setPatentFont(pdf, 'bold');
         pdf.text('ABSTRACT', pageWidth / 2, yPos, { align: 'center' });
         yPos += 20;
         setPatentFont(pdf, 'normal');
-        const abstractLines = pdf.splitTextToSize(selectedApp.abstract, maxWidth);
-        pdf.text(abstractLines, margin, yPos);
-        yPos += abstractLines.length * 14 + 30;
+        addText(selectedApp.abstract);
+        yPos += PARA_SPACE * 2;
       }
 
+      // Specification
       if (selectedApp.specification) {
-        if (yPos > 600) { pdf.addPage(); yPos = margin; }
+        ensureSpace(30);
         const specLines = selectedApp.specification.split('\n');
         for (const line of specLines) {
-          if (yPos > 700) { pdf.addPage(); yPos = margin; }
           if (line.match(/^[A-Z\s]+$/) && line.trim().length > 0) {
+            ensureSpace(30);
+            yPos += PARA_SPACE;
             setPatentFont(pdf, 'bold');
-            yPos += 10;
             pdf.text(line, margin, yPos);
             setPatentFont(pdf, 'normal');
             yPos += 18;
+          } else if (line.trim()) {
+            addText(line);
           } else {
-            const wrapped = pdf.splitTextToSize(line, maxWidth);
-            pdf.text(wrapped, margin, yPos);
-            yPos += wrapped.length * 14;
+            yPos += PARA_SPACE;
           }
         }
       }
 
+      // Claims
       if (selectedApp.claims.length > 0) {
         pdf.addPage();
         yPos = margin;
@@ -573,38 +599,45 @@ Respond with ONLY the JSON object.`;
         setPatentFont(pdf, 'normal');
         pdf.setFontSize(12);
         for (const claim of selectedApp.claims.sort((a, b) => a.claim_number - b.claim_number)) {
-          if (yPos > 650) { pdf.addPage(); yPos = margin; }
+          ensureSpace(40);
           const claimText = `${claim.claim_number}. ${claim.claim_text}`;
-          const wrapped = pdf.splitTextToSize(claimText, maxWidth);
-          pdf.text(wrapped, margin, yPos);
-          yPos += wrapped.length * 14 + 20;
+          addText(claimText);
+          yPos += PARA_SPACE;
         }
       }
 
+      // Drawings
       if (selectedApp.drawings.length > 0) {
         for (const drawing of selectedApp.drawings.sort((a, b) => a.figure_number - b.figure_number)) {
           pdf.addPage();
+          yPos = margin;
           setPatentFont(pdf, 'bold');
           pdf.setFontSize(12);
-          pdf.text(`FIG. ${drawing.figure_number} - ${drawing.title}`, pageWidth / 2, margin, { align: 'center' });
+          pdf.text(`FIG. ${drawing.figure_number} - ${drawing.title}`, pageWidth / 2, yPos, { align: 'center' });
+          yPos += 24;
+
           const pngDataUrl = drawingsWithImages.get(drawing.figure_number);
           if (pngDataUrl) {
-            const imgMaxWidth = maxWidth;
-            const imgMaxHeight = pageHeight - margin * 2 - 100;
+            const availableHeight = bottomLimit - yPos - 60; // leave room for caption
+            const availableWidth = maxWidth;
             const aspectRatio = 800 / 600;
-            let imgWidth = imgMaxWidth;
+            let imgWidth = availableWidth;
             let imgHeight = imgWidth / aspectRatio;
-            if (imgHeight > imgMaxHeight) { imgHeight = imgMaxHeight; imgWidth = imgHeight * aspectRatio; }
+            if (imgHeight > availableHeight) {
+              imgHeight = availableHeight;
+              imgWidth = imgHeight * aspectRatio;
+            }
             const imgX = (pageWidth - imgWidth) / 2;
-            pdf.addImage(pngDataUrl, 'PNG', imgX, margin + 30, imgWidth, imgHeight);
+            pdf.addImage(pngDataUrl, 'PNG', imgX, yPos, imgWidth, imgHeight);
+            yPos += imgHeight + 16;
           }
+
           setPatentFont(pdf, 'normal');
-          pdf.setFontSize(12);
+          pdf.setFontSize(10);
           if (drawing.description) {
-            const descLines = pdf.splitTextToSize(drawing.description, maxWidth);
-            const descY = pngDataUrl ? margin + 30 + (pageHeight - margin * 2 - 100) + 20 : margin + 50;
-            pdf.text(descLines, margin, Math.min(descY, 680));
+            addText(drawing.description);
           }
+          pdf.setFontSize(12);
         }
       }
 
@@ -670,12 +703,28 @@ Respond with ONLY the JSON object.`;
       setPatentFont(pdf, 'normal');
       pdf.setFontSize(12);
 
+      const LINE_HT = 14;
+      const pageHeight = getPageHeight(pdf);
+      const bottomLimit = pageHeight - PDF_MARGINS.bottom;
+      const sectionEnsureSpace = (needed: number) => {
+        if (yPos + needed > bottomLimit) {
+          pdf.addPage();
+          yPos = margin;
+        }
+      };
+      const sectionAddText = (text: string) => {
+        const lines = pdf.splitTextToSize(text.trim(), maxWidth);
+        for (const line of lines) {
+          sectionEnsureSpace(LINE_HT);
+          pdf.text(line, margin, yPos);
+          yPos += LINE_HT;
+        }
+      };
+
       if (section === 'specification' && selectedApp.specification) {
-        const specLines = pdf.splitTextToSize(selectedApp.specification, maxWidth);
-        pdf.text(specLines, margin, yPos);
+        sectionAddText(selectedApp.specification);
       } else if (section === 'abstract' && selectedApp.abstract) {
-        const abstractLines = pdf.splitTextToSize(selectedApp.abstract, maxWidth);
-        pdf.text(abstractLines, margin, yPos);
+        sectionAddText(selectedApp.abstract);
       }
 
       addPdfAMetadata(pdf, `${selectedApp.title} - ${section}`, selectedApp.inventor_name || 'Unknown Inventor');
