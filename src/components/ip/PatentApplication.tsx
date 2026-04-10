@@ -213,19 +213,16 @@ Respond with ONLY the JSON object.`;
   }, [projectId, user]);
 
   const loadApplications = async () => {
-    if (!projectId || !user) { console.warn('[Patent] No projectId or user', { projectId, user: !!user }); return; }
+    if (!projectId || !user) return;
     setLoading(true);
     setError(null);
     try {
-      console.log('[Patent] Loading apps for project:', projectId, 'user:', user.id);
       const apps = await getPatentApplications(projectId, user.id);
-      console.log('[Patent] Loaded', apps.length, 'applications');
       setApplications(apps);
       if (apps.length > 0 && !selectedApp) {
         await loadApplication(apps[0].id);
       }
     } catch (err) {
-      console.error('[Patent] Load failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to load applications');
     } finally {
       setLoading(false);
