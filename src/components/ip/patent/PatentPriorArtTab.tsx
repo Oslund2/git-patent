@@ -35,6 +35,10 @@ interface PriorArtResult {
   claim_overlap_analysis?: string;
   similarity_explanation?: string;
   user_marked_relevant?: boolean;
+  red_flags?: string[];
+  risk_level?: string;
+  filing_date?: string;
+  inventors?: string[];
 }
 
 interface PatentPriorArtTabProps {
@@ -98,6 +102,12 @@ export function PatentPriorArtTab({
   const avgRelevance = priorArtResults.length > 0
     ? Math.round(priorArtResults.reduce((sum, r) => sum + normalizeScore(r.relevance_score), 0) / priorArtResults.length)
     : 0;
+  const criticalResults = priorArtResults.filter(
+    r => r.risk_level === 'critical' || r.risk_level === 'high'
+  );
+  const highestRisk = criticalResults.length > 0
+    ? (criticalResults.some(r => r.risk_level === 'critical') ? 'critical' : 'high')
+    : (priorArtResults.some(r => r.risk_level === 'moderate') ? 'moderate' : 'low');
 
   const handleAddManual = async () => {
     if (!manualPatentNumber.trim()) return;
@@ -171,7 +181,7 @@ export function PatentPriorArtTab({
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 p-4 border border-blue-100">
           <p className="text-2xl font-bold text-blue-700">{priorArtResults.length}</p>
           <p className="text-xs font-medium text-blue-600 mt-1">Patents Found</p>
@@ -184,7 +194,67 @@ export function PatentPriorArtTab({
           <p className="text-2xl font-bold text-amber-700">{avgRelevance}%</p>
           <p className="text-xs font-medium text-amber-600 mt-1">Avg Relevance</p>
         </div>
+        <div className={`rounded-2xl p-4 border ${
+          highestRisk === 'critical' ? 'bg-gradient-to-br from-red-50 to-rose-50 border-red-200' :
+          highestRisk === 'high' ? 'bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200' :
+          highestRisk === 'moderate' ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200' :
+          'bg-gradient-to-br from-green-50 to-emerald-50 border-green-100'
+        }`}>
+          <p className={`text-2xl font-bold capitalize ${
+            highestRisk === 'critical' ? 'text-red-700' :
+            highestRisk === 'high' ? 'text-orange-700' :
+            highestRisk === 'moderate' ? 'text-amber-700' :
+            'text-green-700'
+          }`}>{highestRisk}</p>
+          <p className={`text-xs font-medium mt-1 ${
+            highestRisk === 'critical' ? 'text-red-600' :
+            highestRisk === 'high' ? 'text-orange-600' :
+            highestRisk === 'moderate' ? 'text-amber-600' :
+            'text-green-600'
+          }`}>Risk Level</p>
+        </div>
       </div>
+
+      {/* Red Flags Panel */}
+      {criticalResults.length > 0 && (
+        <div className="rounded-2xl border-2 border-red-200 bg-gradient-to-br from-red-50 to-orange-50 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <ShieldAlert className="w-5 h-5 text-red-600" />
+            <h4 className="text-sm font-bold text-red-800">Patent Risk Flags</h4>
+            <span className="text-xs font-medium text-red-600 bg-red-100 px-2 py-0.5 rounded-full">{criticalResults.length} issue{criticalResults.length > 1 ? 's' : ''}</span>
+          </div>
+          <div className="space-y-3">
+            {criticalResults.map((result, idx) => {
+              const title = result.patent_title || result.title || 'Unknown Patent';
+              const flags = result.red_flags || [];
+              return (
+                <div key={`flag-${idx}`} className="bg-white/70 rounded-xl p-3 border border-red-100">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-xs font-mono font-semibold text-red-700 bg-red-100 px-2 py-0.5 rounded-md">{result.patent_number}</span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${result.risk_level === 'critical' ? 'text-white bg-red-600' : 'text-orange-800 bg-orange-200'}`}>
+                      {(result.risk_level || '').toUpperCase()}
+                    </span>
+                    <span className="text-xs font-medium text-gray-700 truncate">{title}</span>
+                  </div>
+                  {flags.length > 0 && (
+                    <ul className="space-y-1 ml-1">
+                      {flags.map((flag, fi) => (
+                        <li key={fi} className="text-xs text-red-700 leading-relaxed flex items-start gap-1.5">
+                          <span className="text-red-400 mt-0.5 flex-shrink-0">-</span>
+                          {flag}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-red-600 mt-3 font-medium">
+            {criticalResults.length} patent{criticalResults.length > 1 ? 's' : ''} require design-around review before filing.
+          </p>
+        </div>
+      )}
 
       {/* Manual entry form */}
       {showManualForm && (
@@ -325,6 +395,30 @@ export function PatentPriorArtTab({
               {/* Expanded details */}
               {isExpanded && (
                 <div className="px-4 pb-4 pt-1 border-t border-gray-50 space-y-3">
+                  {(result.filing_date || (result.inventors && result.inventors.length > 0)) && (
+                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                      {result.filing_date && (
+                        <p className="text-xs text-gray-500">
+                          Filed: {new Date(result.filing_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}
+                        </p>
+                      )}
+                      {result.inventors && result.inventors.length > 0 && (
+                        <p className="text-xs text-gray-500">
+                          Inventors: {result.inventors.slice(0, 3).join(', ')}{result.inventors.length > 3 ? ' et al.' : ''}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {result.red_flags && result.red_flags.length > 0 && (
+                    <div className="bg-red-50 rounded-lg p-2.5 border border-red-100">
+                      <p className="text-xs font-semibold text-red-700 mb-1">Risk Flags</p>
+                      <ul className="space-y-0.5">
+                        {result.red_flags.map((flag, fi) => (
+                          <li key={fi} className="text-xs text-red-600 leading-relaxed">- {flag}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   {abstract && (
                     <div>
                       <p className="text-xs font-semibold text-gray-700 mb-1">Abstract</p>

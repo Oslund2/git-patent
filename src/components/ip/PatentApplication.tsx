@@ -403,10 +403,21 @@ Respond with ONLY the JSON object.`;
   };
 
   const handleGenerateComparison = async () => {
-    if (!selectedApp) return;
+    if (!selectedApp || !projectId) return;
     setGeneratingComparison(true);
     try {
-      const report = await generatePriorArtComparison(selectedApp.id, []);
+      // Load features for the comparison (instead of passing empty array)
+      const { data: featureRows } = await (supabase as any)
+        .from('extracted_features')
+        .select('name, description, type, novelty_strength, is_core_innovation')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+      const features = (featureRows || []).map((f: any) => ({
+        name: f.name || 'Unnamed',
+        description: f.description || '',
+        type: f.type || 'algorithm',
+      }));
+      const report = await generatePriorArtComparison(selectedApp.id, features);
       setComparisonReport(report);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate comparison');

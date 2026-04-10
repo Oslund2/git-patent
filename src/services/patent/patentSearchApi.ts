@@ -25,6 +25,7 @@ export async function fetchRealPatents(params: {
   description: string;
   keywords?: string[];
   maxResults?: number;
+  queries?: string[];
 }): Promise<SerperPatentResult[]> {
   try {
     const response = await fetch('/.netlify/functions/search-patents', {
