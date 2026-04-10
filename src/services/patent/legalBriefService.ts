@@ -323,10 +323,10 @@ export async function loadLegalBriefData(applicationId: string, projectId: strin
     .select('*', { count: 'exact', head: true })
     .eq('application_id', applicationId);
 
-  // Load prior art — is_blocking and similarity_explanation live in metadata JSONB
+  // Load prior art — column is 'title' not 'patent_title'
   const { data: priorArt } = await (supabase as any)
     .from('patent_prior_art_results')
-    .select('patent_number, title, relevance_score, metadata')
+    .select('patent_number, title, relevance_score, is_blocking, similarity_explanation, metadata')
     .eq('application_id', applicationId)
     .order('relevance_score', { ascending: false });
 
@@ -404,14 +404,14 @@ export async function loadLegalBriefData(applicationId: string, projectId: strin
     dependentClaims: claimsList.length - independentClaimsCount,
     claimCategories: [...new Set(claimsList.map((c: any) => c.category).filter(Boolean))] as string[],
     priorArtCount: priorArtList.length,
-    blockingPriorArt: priorArtList.filter((pa: any) => pa.metadata?.is_blocking).length,
+    blockingPriorArt: priorArtList.filter((pa: any) => pa.is_blocking).length,
     highRelevancePriorArt: priorArtList.filter((pa: any) => pa.relevance_score >= 80).length,
     priorArtDetails: priorArtList.slice(0, 10).map((pa: any) => ({
       number: pa.patent_number,
       title: pa.title,
       relevance: pa.relevance_score,
-      blocking: pa.metadata?.is_blocking || false,
-      explanation: pa.metadata?.similarity_explanation || '',
+      blocking: pa.is_blocking || false,
+      explanation: pa.similarity_explanation || '',
     })),
     aliceRiskScore: (app.metadata as any)?.alice_risk_score ?? null,
     aliceRiskLevel: (app.metadata as any)?.alice_risk_level ?? null,
