@@ -323,12 +323,17 @@ export async function loadLegalBriefData(applicationId: string, projectId: strin
     .select('*', { count: 'exact', head: true })
     .eq('application_id', applicationId);
 
-  // Load prior art — column is 'title' not 'patent_title'
-  const { data: priorArt } = await (supabase as any)
+  // Load prior art
+  const { data: priorArt, error: priorArtError } = await (supabase as any)
     .from('patent_prior_art_results')
-    .select('patent_number, title, relevance_score, is_blocking, similarity_explanation, metadata')
+    .select('*')
     .eq('application_id', applicationId)
     .order('relevance_score', { ascending: false });
+
+  if (priorArtError) {
+    console.error('Legal brief: prior art query failed:', JSON.stringify(priorArtError));
+  }
+  console.log(`Legal brief: loaded ${priorArt?.length ?? 0} prior art results for app ${applicationId}`);
 
   // Load novelty analysis
   let noveltyData: any = null;
