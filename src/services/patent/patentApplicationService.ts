@@ -379,15 +379,28 @@ export async function createPatentDrawing(
 ): Promise<PatentDrawing> {
   const { data, error } = await (supabase as any)
     .from('patent_drawings')
-    .insert([{
+    .upsert([{
       application_id: applicationId,
       ...drawing
-    }])
+    }], { onConflict: 'application_id,figure_number' })
     .select()
     .single();
 
   if (error) {
-    throw new Error(`Failed to create patent drawing: ${error.message} (Code: ${error.code})`);
+    // Fallback to plain insert if upsert fails (e.g., no unique constraint on those columns)
+    const { data: fallbackData, error: fallbackError } = await (supabase as any)
+      .from('patent_drawings')
+      .insert([{
+        application_id: applicationId,
+        ...drawing
+      }])
+      .select()
+      .single();
+
+    if (fallbackError) {
+      throw new Error(`Failed to create patent drawing: ${fallbackError.message} (Code: ${fallbackError.code})`);
+    }
+    return fallbackData;
   }
 
   return data;

@@ -121,12 +121,22 @@ export function PatentDrawingsTab({ drawings, generating, onGenerate, onRegenera
               onClick={() => setSelectedDrawing(drawing)}
             >
               <div className="aspect-[4/3] bg-slate-50 overflow-hidden">
-                {drawing.svg_content && (
+                {drawing.svg_content ? (
                   <img
                     src={svgToDataUrl(drawing.svg_content)}
                     alt={`FIG. ${drawing.figure_number}`}
                     className="w-full h-full object-contain transition-transform duration-200 group-hover:scale-105"
+                    onError={(e) => {
+                      // SVG data URL failed to render — hide broken image and show fallback
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
                   />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                    <FileImage className="w-8 h-8 mb-2 text-gray-300" />
+                    <span className="text-xs font-medium">Generation failed</span>
+                    <span className="text-xs text-gray-300 mt-0.5">Click to regenerate</span>
+                  </div>
                 )}
                 {/* Hover overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end justify-center pb-16">
@@ -210,13 +220,22 @@ export function PatentDrawingsTab({ drawings, generating, onGenerate, onRegenera
               <div className="flex flex-col lg:flex-row">
                 {/* Drawing */}
                 <div className="flex-1 p-6">
-                  {selectedDrawing.svg_content && (
+                  {selectedDrawing.svg_content ? (
                     <div className="bg-slate-50 border border-gray-100 rounded-xl p-4">
                       <img
                         src={svgToDataUrl(selectedDrawing.svg_content)}
                         alt={`FIG. ${selectedDrawing.figure_number}`}
                         className="w-full"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
                       />
+                    </div>
+                  ) : (
+                    <div className="bg-slate-50 border border-gray-100 rounded-xl p-8 flex flex-col items-center justify-center text-gray-400">
+                      <FileImage className="w-12 h-12 mb-3 text-gray-300" />
+                      <p className="text-sm font-medium">Drawing not available</p>
+                      <p className="text-xs text-gray-400 mt-1">Use the Regenerate button above to recreate this figure</p>
                     </div>
                   )}
                   {selectedDrawing.description && (

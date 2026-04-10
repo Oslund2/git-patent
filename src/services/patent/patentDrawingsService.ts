@@ -443,8 +443,19 @@ export async function generateDrawingsForApplication(
 
   try {
     await deleteAllDrawingsForApplication(applicationId);
+    console.log('Deleted existing drawings for fresh generation');
   } catch (error) {
-    console.error('Failed to delete existing drawings:', error);
+    console.error('Failed to delete existing drawings — retrying with direct query:', error);
+    // Fallback: try direct delete to avoid constraint violations on insert
+    try {
+      await (supabase as any)
+        .from('patent_drawings')
+        .delete()
+        .eq('application_id', applicationId);
+      console.log('Fallback delete succeeded');
+    } catch (retryErr) {
+      console.error('Fallback delete also failed:', retryErr);
+    }
   }
 
   try {
@@ -671,13 +682,14 @@ REQUIREMENTS:
 2. Canvas size: 800x600 pixels
 3. Use numbered callouts starting at ${baseCalloutNumber} (e.g., ${baseCalloutNumber}, ${baseCalloutNumber + 2}, ${baseCalloutNumber + 4})
 4. Each component must have a callout circle (small circle with the number) in its top-left corner
-5. Use arrows to show data flow / control flow between components
+5. Use arrows (simple lines with arrowheads) to show data flow / control flow between components
 6. Style: clean, professional, suitable for USPTO filing
 7. Font: Arial, minimum 14px for labels, 12px for callouts
-8. Colors: Use #EFF6FF fill with #2563EB stroke for core innovation components, #F9FAFB fill with #6B7280 stroke for support components, #F0FDF4 fill with #059669 stroke for external services
+8. Colors: Use #EFF6FF fill with #2563EB stroke for core components, #F9FAFB fill with #6B7280 stroke for support components
 9. Minimum stroke width: 2px
 10. Include a title at the bottom: "FIG. ${spec.figureNumber} — ${spec.title}"
 11. ONLY depict components and relationships that exist in the features listed above — do NOT add generic modules like "Database", "Auth", "Cache" unless they are explicitly listed
+12. KEEP IT COMPACT: Limit to at most 12 boxes/shapes total. Combine minor components into grouped blocks if needed. Avoid verbose text — use short labels (2-4 words per box). Do NOT use gradients, filters, or complex path definitions — use simple rect, circle, line, polygon, and text elements only
 
 ${spec.drawingType === 'flowchart' ? 'Use diamond shapes for decision points, rounded rectangles for start/end, rectangles for process steps. Flow should go top-to-bottom.' : ''}
 ${spec.drawingType === 'block_diagram' ? 'Use rectangles for components with directional arrows showing relationships. Group related components visually.' : ''}
@@ -687,9 +699,26 @@ Respond with ONLY the SVG markup. No explanation, no markdown code fences. Start
 
     const response = await generateText(prompt, 'patent_drawing_generation');
 
-    // Extract SVG from response
-    const svgMatch = response.match(/<svg[\s\S]*<\/svg>/);
-    if (!svgMatch) return null;
+    // Extract SVG from response — handle truncated output gracefully
+    let svgMatch = response.match(/<svg[\s\S]*<\/svg>/);
+
+    if (!svgMatch) {
+      // AI response may have been truncated (hit token limit) — try to repair
+      const svgStart = response.match(/<svg[\s\S]*/);
+      if (svgStart) {
+        console.warn(`FIG. ${spec.figureNumber}: SVG truncated — attempting repair`);
+        // Close any open tags and append closing </svg>
+        let truncated = svgStart[0];
+        // Remove any trailing incomplete tag (e.g., "<rect wid")
+        truncated = truncated.replace(/<[^>]*$/, '');
+        truncated += '</svg>';
+        svgMatch = truncated.match(/<svg[\s\S]*<\/svg>/);
+        if (svgMatch) {
+          console.log(`FIG. ${spec.figureNumber}: SVG repair successful (${svgMatch[0].length} chars)`);
+        }
+      }
+      if (!svgMatch) return null;
+    }
 
     const svg = svgMatch[0];
 
