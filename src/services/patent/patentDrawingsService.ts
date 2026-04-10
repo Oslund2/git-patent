@@ -480,10 +480,10 @@ export async function generateDrawingsForApplication(
 
     for (const spec of drawingSpecs) {
       await sleep(100);
+      const figureId = spec.figureNumber.toString();
 
       try {
-        const figureNum = spec.subFigureLetter ? `${spec.figureNumber}${spec.subFigureLetter}` : spec.figureNumber.toString();
-        console.log(`Generating Figure ${figureNum}: ${spec.title}`);
+        console.log(`Generating Figure ${figureId}: ${spec.title}`);
 
         const result = await generateDiagramForSpec(spec, features, domainAnalysis);
 
@@ -502,10 +502,9 @@ export async function generateDrawingsForApplication(
         });
 
         drawings.push(drawing);
-        console.log(`Successfully generated Figure ${figureNum}`);
+        console.log(`Successfully generated Figure ${figureId}`);
       } catch (error) {
         const errorInfo = extractErrorInfo(error);
-        const figureId = spec.subFigureLetter ? `${spec.figureNumber}${spec.subFigureLetter}` : spec.figureNumber.toString();
 
         console.error(`Failed to generate Figure ${figureId}:`, errorInfo);
 
@@ -533,20 +532,23 @@ export async function generateDrawingsForApplication(
           console.log(`Retry successful for Figure ${figureId}`);
         } catch (retryError) {
           console.error(`Retry failed for Figure ${figureId}:`, retryError);
-          // Create a placeholder so figure numbering stays sequential
+          // Always insert a placeholder so figure numbering stays sequential
+          const placeholderSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect width="800" height="600" fill="#f9fafb" stroke="#d1d5db" stroke-width="2"/><text x="400" y="280" text-anchor="middle" fill="#9ca3af" font-family="Helvetica" font-size="18">FIG. ${figureId}</text><text x="400" y="320" text-anchor="middle" fill="#d1d5db" font-family="Helvetica" font-size="14">[Generation failed — click Regenerate]</text></svg>`;
           try {
             const placeholder = await createPatentDrawing(applicationId, {
               figure_number: spec.figureNumber,
               title: spec.title || `Figure ${figureId}`,
               description: `[Generation failed — regenerate this figure] ${errorInfo.message}`,
-              svg_content: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect width="800" height="600" fill="#f9fafb" stroke="#d1d5db" stroke-width="2"/><text x="400" y="280" text-anchor="middle" fill="#9ca3af" font-family="Helvetica" font-size="18">FIG. ${figureId}</text><text x="400" y="320" text-anchor="middle" fill="#d1d5db" font-family="Helvetica" font-size="14">[Generation failed — click Regenerate]</text></svg>`,
+              svg_content: placeholderSvg,
               image_url: null,
               drawing_type: spec.drawingType,
               callouts: []
             });
             drawings.push(placeholder);
+            console.warn(`Inserted placeholder for Figure ${figureId}`);
           } catch (placeholderErr) {
-            console.error(`Failed to create placeholder for Figure ${figureId}:`, placeholderErr);
+            // Last resort: log loudly so this is never silently lost
+            console.error(`CRITICAL: Failed to create placeholder for Figure ${figureId}. This figure will be missing from the application.`, placeholderErr);
           }
         }
       }

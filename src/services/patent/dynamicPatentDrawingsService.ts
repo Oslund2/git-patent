@@ -9,7 +9,6 @@ export interface DrawingSpec {
   sourceFeatures: ExtractedFeature[];
   estimatedComplexity: 'simple' | 'moderate' | 'complex';
   requiresSplit: boolean;
-  subFigureLetter?: string;
 }
 
 export interface DomainAnalysis {
@@ -49,52 +48,28 @@ export function planDrawingFigures(
   let figureNumber = 1;
 
   const systemComponents = estimateSystemComponents(features);
-  const needsSplit = systemComponents > 15;
 
   // Cap features for Figure 1 to avoid exceeding AI output token limits.
   // Prioritize core innovations, then strong novelty, then moderate.
-  const MAX_ARCH_FEATURES = 12;
+  const MAX_ARCH_FEATURES = 10;
   const archFeatures = [
     ...features.filter(f => f.isCoreInnovation),
     ...features.filter(f => !f.isCoreInnovation && f.noveltyStrength === 'strong'),
     ...features.filter(f => !f.isCoreInnovation && f.noveltyStrength !== 'strong'),
   ].slice(0, MAX_ARCH_FEATURES);
 
-  if (needsSplit) {
-    specs.push({
-      figureNumber: 1,
-      subFigureLetter: 'a',
-      title: 'High-Level System Architecture Overview',
-      description: `FIG. 1a is a block diagram illustrating the high-level system architecture overview showing major subsystems of the software system according to an embodiment of the present invention.`,
-      drawingType: 'block_diagram',
-      sourceFeatures: archFeatures,
-      estimatedComplexity: 'moderate',
-      requiresSplit: true
-    });
-
-    specs.push({
-      figureNumber: 1,
-      subFigureLetter: 'b',
-      title: 'Detailed Component Architecture',
-      description: `FIG. 1b is a block diagram illustrating the detailed component architecture with internal modules and processing engines of the software system according to an embodiment of the present invention.`,
-      drawingType: 'block_diagram',
-      sourceFeatures: archFeatures,
-      estimatedComplexity: 'complex',
-      requiresSplit: true
-    });
-    figureNumber = 2;
-  } else {
-    specs.push({
-      figureNumber: 1,
-      title: 'Integrated System Architecture',
-      description: `FIG. 1 is a block diagram illustrating the integrated system architecture of the software system according to an embodiment of the present invention.`,
-      drawingType: 'block_diagram',
-      sourceFeatures: archFeatures,
-      estimatedComplexity: systemComponents > 10 ? 'moderate' : 'simple',
-      requiresSplit: false
-    });
-    figureNumber = 2;
-  }
+  // Always generate a single Figure 1 architecture diagram.
+  // The feature cap above keeps the SVG within token limits.
+  specs.push({
+    figureNumber: 1,
+    title: 'System Architecture',
+    description: `FIG. 1 is a block diagram illustrating the system architecture of the software system according to an embodiment of the present invention.`,
+    drawingType: 'block_diagram',
+    sourceFeatures: archFeatures,
+    estimatedComplexity: systemComponents > 15 ? 'complex' : systemComponents > 10 ? 'moderate' : 'simple',
+    requiresSplit: false
+  });
+  figureNumber = 2;
 
   for (const feature of analysis.topTierFeatures) {
     const spec = createFeatureDrawingSpec(feature, figureNumber);
