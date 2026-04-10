@@ -48,9 +48,10 @@ export function extractADSDataFromApplication(app: PatentApplication): ADSFormDa
   };
 }
 
-const MARGIN = 50;
+const MARGIN = 54;
 const PAGE_HEIGHT = 792; // Letter height in points
 const PAGE_WIDTH = 612;
+const BOTTOM_MARGIN = 72; // 1 inch footer room
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
 const LINE_HEIGHT = 13;
 const SECTION_GAP = 12;
@@ -98,7 +99,7 @@ function checkbox(doc: jsPDF, x: number, y: number, checked: boolean, label: str
 }
 
 function checkPageBreak(doc: jsPDF, y: number, needed = 60): number {
-  if (y + needed > PAGE_HEIGHT - 50) {
+  if (y + needed > PAGE_HEIGHT - BOTTOM_MARGIN) {
     doc.addPage();
     return formHeader(doc, 40);
   }

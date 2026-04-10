@@ -54,9 +54,10 @@ export interface CoverSheetData {
 // PDF generation — PTO/SB/16 layout
 // ---------------------------------------------------------------------------
 
-const MARGIN = 50;
+const MARGIN = 54;       // ~0.75 inch side margins
 const PAGE_WIDTH = 612;  // Letter
 const PAGE_HEIGHT = 792;
+const BOTTOM_MARGIN = 72; // 1 inch footer room
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
 const LINE = 12;
 const SMALL = 8;
@@ -81,7 +82,7 @@ function checkbox(doc: jsPDF, x: number, y: number, checked: boolean) {
 }
 
 function needsNewPage(doc: jsPDF, y: number, needed: number): number {
-  if (y + needed > PAGE_HEIGHT - MARGIN) {
+  if (y + needed > PAGE_HEIGHT - BOTTOM_MARGIN) {
     doc.addPage();
     return MARGIN + 10;
   }

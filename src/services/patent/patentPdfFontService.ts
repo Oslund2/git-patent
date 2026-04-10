@@ -27,6 +27,10 @@ export function createUsptoCompliantPdf(): jsPDF {
 
   pdf.setTextColor(0, 0, 0);
   pdf.setFontSize(12);
+  // Improve text spacing for better readability
+  if (typeof pdf.setCharSpace === 'function') {
+    pdf.setCharSpace(0.2);
+  }
 
   return pdf;
 }

@@ -533,6 +533,21 @@ export async function generateDrawingsForApplication(
           console.log(`Retry successful for Figure ${figureId}`);
         } catch (retryError) {
           console.error(`Retry failed for Figure ${figureId}:`, retryError);
+          // Create a placeholder so figure numbering stays sequential
+          try {
+            const placeholder = await createPatentDrawing(applicationId, {
+              figure_number: spec.figureNumber,
+              title: spec.title || `Figure ${figureId}`,
+              description: `[Generation failed — regenerate this figure] ${errorInfo.message}`,
+              svg_content: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect width="800" height="600" fill="#f9fafb" stroke="#d1d5db" stroke-width="2"/><text x="400" y="280" text-anchor="middle" fill="#9ca3af" font-family="Helvetica" font-size="18">FIG. ${figureId}</text><text x="400" y="320" text-anchor="middle" fill="#d1d5db" font-family="Helvetica" font-size="14">[Generation failed — click Regenerate]</text></svg>`,
+              image_url: null,
+              drawing_type: spec.drawingType,
+              callouts: []
+            });
+            drawings.push(placeholder);
+          } catch (placeholderErr) {
+            console.error(`Failed to create placeholder for Figure ${figureId}:`, placeholderErr);
+          }
         }
       }
     }

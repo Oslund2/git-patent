@@ -6,8 +6,10 @@
 import jsPDF from 'jspdf';
 import type { PatentApplication, InventorInfo } from './patentApplicationService';
 
-const MARGIN = 50;
+const MARGIN = 54;
 const PAGE_WIDTH = 612;
+const PAGE_HEIGHT = 792;
+const BOTTOM_MARGIN = 72;
 const LINE_HEIGHT = 13;
 
 function formHeader(doc: jsPDF, y: number): number {
