@@ -8,8 +8,6 @@ import type { PatentApplication } from './patentApplicationService';
 
 const MARGIN = 54;
 const PAGE_WIDTH = 612;
-const PAGE_HEIGHT = 792;
-const BOTTOM_MARGIN = 72;
 const LINE_HEIGHT = 13;
 
 function checkbox(doc: jsPDF, x: number, y: number, checked: boolean): void {
