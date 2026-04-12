@@ -89,9 +89,9 @@ export default async function handler(req: Request, _context: Context) {
         return (data.organic || data.patents || []).map((item: any) => ({
           title: item.title || "",
           snippet: item.snippet || item.description || "",
-          patentNumber: item.patentId || item.patentNumber || extractPatentNumber(item.link) || "",
+          patentNumber: item.publicationNumber || item.patentId || item.patentNumber || extractPatentNumber(item.link) || "",
           link: item.link || "",
-          date: item.date || item.filingDate || item.publicationDate || "",
+          date: item.filingDate || item.priorityDate || item.publicationDate || item.date || "",
           inventor: item.inventor || item.inventors || "",
           assignee: item.assignee || "",
           thumbnailUrl: item.thumbnailUrl || item.imageUrl || "",

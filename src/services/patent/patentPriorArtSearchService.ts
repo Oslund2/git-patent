@@ -83,11 +83,16 @@ async function searchGooglePatents(params: PriorArtSearchParams, projectId: stri
 
   console.log(`Found ${realPatents.length} unique patents from Google Patents`);
 
-  // Cap at 20 for AI analysis to stay within token budget
-  const capped = realPatents.slice(0, 20);
+  // Cap at 10 for AI analysis to stay within Netlify function timeout (~26s)
+  const capped = realPatents.slice(0, 10);
 
   // Phase B: Use AI to analyze relevance of real results
+  // If AI fails, fall back to raw Serper results so user always sees prior art
   const analyzed = await analyzePatentRelevance(capped, params);
+  if (analyzed.length === 0 && capped.length > 0) {
+    console.warn('AI analysis returned no results — using unscored Serper results as fallback');
+    return capped.map(mapSerperToResult);
+  }
   return analyzed;
 }
 
@@ -164,45 +169,28 @@ async function analyzePatentRelevance(
   realPatents: SerperPatentResult[],
   params: PriorArtSearchParams
 ): Promise<PriorArtResult[]> {
-  // Format real patents for the AI prompt
+  // Format real patents for the AI prompt — keep concise to fit within timeout
   const patentList = realPatents.map((p, i) =>
-    `${i + 1}. Patent: ${p.patentNumber}\n   Title: ${p.title}\n   Snippet: ${p.snippet}\n   Assignee: ${p.assignee || 'Unknown'}\n   Date: ${p.date || 'Unknown'}\n   URL: ${p.link}`
-  ).join('\n\n');
+    `${i + 1}. [${p.patentNumber}] "${p.title}" — ${(p.snippet || '').slice(0, 200)} (${p.assignee || 'Unknown'}, ${p.date || 'Unknown'}) ${p.link}`
+  ).join('\n');
 
-  const analysisPrompt = `You are a senior patent examiner. Analyze the following REAL patents found via Google Patents for relevance to an invention.
+  const analysisPrompt = `Analyze these patents for relevance to: "${params.title}"
+Description: ${(params.description || '').slice(0, 500)}
 
-INVENTION TITLE: ${params.title}
-INVENTION DESCRIPTION: ${params.description}
-
-REAL PATENTS FOUND (these are verified Google Patents results — do NOT modify patent numbers, titles, or URLs):
+PATENTS:
 ${patentList}
 
-STRICT SCORING RULES — ENFORCE THESE:
-- relevanceScore MUST be 0-20 if the patent has NO technical overlap with the invention's domain or mechanism. Do NOT default to 50.
-- A score of 50 means genuine moderate overlap. Use scores below 20 freely for unrelated patents.
-- Mark relationshipType as "unrelated" and isBlocking as false for any patent scoring below 25.
-- Only mark isBlocking: true if the patent's claims would literally read on the invention as described.
-- Be harsh: if a patent is in a completely different technical domain, score it 0-10 regardless of superficial keyword overlap.
+For EACH patent, return a JSON array. Copy patentNumber/title/url exactly. Add:
+- relevanceScore: 0-100 (0-20 if no technical overlap, 50+ for real overlap)
+- technicalSimilarityScore: 0-100
+- similarityExplanation: 1-2 sentences
+- relationshipType: "similar"|"improvement"|"different_approach"|"unrelated"
+- isBlocking: boolean (true ONLY if claims literally read on the invention)
+- riskLevel: "critical"|"high"|"moderate"|"low"|"none"
+- redFlags: array of specific risk sentences (empty if low/none)
 
-For EACH patent above, provide a relevance analysis as a JSON array. Use the EXACT patent numbers and titles from above. Add these analysis fields:
-- patentNumber: (copy exactly from above)
-- title: (copy exactly from above)
-- abstract: The snippet from above (copy it)
-- assignee: (copy from above)
-- url: (copy from above)
-- date: (copy from above)
-- relevanceScore: 0-100, how relevant to the invention
-- technicalSimilarityScore: 0-100, technical similarity of approach
-- similarityExplanation: 2-3 sentences on similarity and key differences
-- relationshipType: "similar" | "improvement" | "different_approach" | "unrelated"
-- isBlocking: boolean, could this patent's claims block the invention?
-- threatenedClaims: array of integers (claim numbers that may overlap), or empty array
-- claimOverlapAnalysis: brief explanation of overlap, or empty string
-- riskLevel: "critical" (isBlocking + relevance >= 80) | "high" (isBlocking OR relevance >= 70) | "moderate" (relevance 40-69) | "low" (relevance 20-39) | "none" (irrelevant)
-- redFlags: array of 1-3 specific risk sentences. Each sentence MUST name the specific patent claim or technical feature that overlaps with the invention. Empty array if riskLevel is "low" or "none".
-  Example: ["Claim 3 covers automated code review pipelines, directly overlapping with the invention's core PR automation feature."]
-
-Respond with ONLY a JSON array containing one object per patent. Do NOT add patents not listed above.`;
+Be strict: score 0-20 for different domains. Only isBlocking if claims directly overlap.
+Respond with ONLY a JSON array.`;
 
   try {
     const response = await generateText(analysisPrompt, 'patent_prior_art_search', { temperature: 0.5 });
@@ -243,14 +231,20 @@ Respond with ONLY a JSON array containing one object per patent. Do NOT add pate
     // Filter out irrelevant results (relevance < 20)
     const filtered = mapped.filter(r => r.relevanceScore >= 20 || r.isBlocking);
     console.log(`AI analysis: ${mapped.length} scored, ${filtered.length} above relevance threshold`);
+    // If AI scored everything below threshold, keep top 5 by relevance anyway
+    if (filtered.length === 0 && mapped.length > 0) {
+      console.warn('All patents scored below threshold — keeping top 5 by relevance');
+      return mapped.sort((a, b) => b.relevanceScore - a.relevanceScore).slice(0, 5);
+    }
     return filtered;
   } catch (err) {
-    console.error('AI analysis failed, returning empty results (no unscored noise):', err);
-    return [];
+    console.error('AI analysis failed, returning unscored Serper results as fallback:', err);
+    return realPatents.map(mapSerperToResult);
   }
 }
 
-/** Map a raw Serper result to PriorArtResult with default scores */
+/** Map a raw Serper result to PriorArtResult with default scores.
+ *  Uses relevanceScore=30 (above the 20 save threshold) so results are preserved. */
 function mapSerperToResult(p: SerperPatentResult): PriorArtResult {
   return {
     patentNumber: p.patentNumber || 'UNKNOWN',
@@ -260,13 +254,14 @@ function mapSerperToResult(p: SerperPatentResult): PriorArtResult {
     assignee: p.assignee || '',
     inventors: p.inventor ? [p.inventor] : [],
     url: p.link,
-    relevanceScore: 50,
-    technicalSimilarityScore: 50,
-    similarityExplanation: '',
-    relationshipType: 'unrelated',
+    relevanceScore: 30,
+    technicalSimilarityScore: 30,
+    similarityExplanation: 'AI relevance analysis was not completed — this is a raw search result from Google Patents. Review manually.',
+    relationshipType: 'similar',
     isBlocking: false,
     threatenedClaims: [],
     claimOverlapAnalysis: '',
+    riskLevel: 'low',
   };
 }
 
