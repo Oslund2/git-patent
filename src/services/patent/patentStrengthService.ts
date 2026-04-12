@@ -1,11 +1,11 @@
 /**
  * Patent Strength Service
  *
- * Computes a composite patent strength score for a project based on
- * the best patent application's novelty score and approval probability.
+ * Uses the best patent application's novelty score as the project-level
+ * patent strength score, ensuring consistency between the project list
+ * and individual patent application views.
  *
- * Formula: 0.6 * novelty_score + 0.4 * approval_probability
- * Uses the MAX across all patent applications (best invention wins).
+ * Uses the MAX novelty_score across all patent applications (best invention wins).
  */
 
 import { supabase } from '../../lib/supabase';
@@ -53,50 +53,31 @@ export async function recalculatePatentStrength(projectId: string): Promise<Pate
 
   for (const app of apps) {
     const noveltyScore = Number(app.novelty_score) || 0;
-    let approvalProbability = 0;
-    let dimensions: PatentStrength['dimensions'] = null;
 
-    if (app.novelty_analysis_id) {
-      const { data: analysis } = await (supabase as any)
-        .from('patent_novelty_analyses')
-        .select('approval_probability, analysis_data')
-        .eq('id', app.novelty_analysis_id)
-        .maybeSingle();
+    // Use novelty_score directly to match the Patent Application view
+    if (noveltyScore > bestScore) {
+      bestScore = noveltyScore;
 
-      if (analysis?.approval_probability != null) {
-        approvalProbability = Number(analysis.approval_probability);
+      // Still extract AI dimensional scores for informational display
+      if (app.novelty_analysis_id) {
+        const { data: analysis } = await (supabase as any)
+          .from('patent_novelty_analyses')
+          .select('analysis_data')
+          .eq('id', app.novelty_analysis_id)
+          .maybeSingle();
+
+        const aiScores = analysis?.analysis_data?.ai_scores;
+        if (aiScores?.novelty_102 && aiScores?.non_obviousness_103 && aiScores?.technical_depth && aiScores?.prior_art_differentiation) {
+          bestDimensions = {
+            novelty_102: Number(aiScores.novelty_102.score) || 0,
+            non_obviousness_103: Number(aiScores.non_obviousness_103.score) || 0,
+            technical_depth: Number(aiScores.technical_depth.score) || 0,
+            prior_art_differentiation: Number(aiScores.prior_art_differentiation.score) || 0,
+          };
+        } else {
+          bestDimensions = null;
+        }
       }
-
-      // Extract AI dimensional scores from analysis_data
-      const aiScores = analysis?.analysis_data?.ai_scores;
-      if (aiScores?.novelty_102 && aiScores?.non_obviousness_103 && aiScores?.technical_depth && aiScores?.prior_art_differentiation) {
-        dimensions = {
-          novelty_102: Number(aiScores.novelty_102.score) || 0,
-          non_obviousness_103: Number(aiScores.non_obviousness_103.score) || 0,
-          technical_depth: Number(aiScores.technical_depth.score) || 0,
-          prior_art_differentiation: Number(aiScores.prior_art_differentiation.score) || 0,
-        };
-      }
-    }
-
-    // Multi-factor composite when AI dimensions available
-    let composite: number;
-    if (dimensions) {
-      composite = (
-        0.35 * noveltyScore +
-        0.25 * approvalProbability +
-        0.15 * dimensions.non_obviousness_103 +
-        0.15 * dimensions.technical_depth +
-        0.10 * dimensions.prior_art_differentiation
-      );
-    } else {
-      // Fallback to original formula when no AI dimensions
-      composite = 0.6 * noveltyScore + 0.4 * approvalProbability;
-    }
-
-    if (composite > bestScore) {
-      bestScore = composite;
-      bestDimensions = dimensions;
     }
   }
 
