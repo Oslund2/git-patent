@@ -23,7 +23,7 @@ The goal is simple: if you wrote something worth protecting, the paperwork shoul
 - **Multi-dimensional novelty analysis** — AI scores four patent dimensions (35 USC 102 Novelty, 35 USC 103 Non-Obviousness, Technical Depth, and Prior Art Differentiation) each with 0-100 scores and reasoning, blended with a heuristic safety net for calibrated results
 - **README-grounded scoring** — the analyzed repo's README serves as structured ground truth in scoring prompts, letting the AI compare the inventor's claimed functionality against extracted code features and prior art
 - **Independent approval probability** — five-factor model (novelty foundation, prior art landscape, specification completeness, Alice/101 eligibility, assessment quality) replaces simple novelty-derived estimates
-- **Patent strength composite** — multi-factor model weighting novelty, approval probability, non-obviousness, technical depth, and prior art differentiation when AI dimensions are available
+- **Patent strength score** — uses the best patent application's novelty score as the project-level strength indicator, ensuring consistency across all views
 - **Differentiation analysis** — points of novelty, technical advantages, feature comparison matrix, design-around strategies, and non-obviousness arguments
 - **CPC classification** — AI-suggested Cooperative Patent Classification codes with confidence scores
 - **USPTO forms** — SB-16 Provisional Cover Sheet, Application Data Sheet (ADS), declaration forms, and micro-entity certification
@@ -56,7 +56,7 @@ import { GitPatentWidget } from 'git-patent';
 <GitPatentWidget
   supabaseUrl="..."
   supabaseAnonKey="..."
-  geminiApiKey="..."
+  anthropicApiKey="..."
   userId="..."
   theme="light"
   initialView="projects"
@@ -86,7 +86,7 @@ Build with `npm run build:lib` — outputs `dist-lib/git-patent.es.js`.
 ## API Integrations
 
 ### Anthropic Claude API
-Core AI engine powering all generation tasks — specifications, claims, multi-dimensional novelty analysis, feature extraction, CPC classification, and more. Feature-specific token limits range from 2,048 to 8,192. The novelty analysis prompt requests structured scoring across four patent dimensions with calibrated anchors and README-grounded evaluation.
+Core AI engine powering all generation tasks — specifications, claims, multi-dimensional novelty analysis, feature extraction, CPC classification, and more. All calls are proxied through the `ai-generate` Netlify serverless function so the API key never reaches the browser. Feature-specific token limits range from 2,048 to 16,384. The novelty analysis prompt requests structured scoring across four patent dimensions with calibrated anchors and README-grounded evaluation.
 
 - **Env var:** `ANTHROPIC_API_KEY` (set in Netlify environment, never shipped to browser)
 
@@ -200,7 +200,7 @@ src/
   contexts/          # AuthContext, ProjectContext
   hooks/             # usePaymentGate (Stripe payment flow)
   services/
-    ai/              # geminiService, promptResolver, aiRequestService
+    ai/              # geminiService (Claude proxy client), promptResolver, aiRequestService
     analysis/        # codebaseAnalysisEngine, codebaseIngestionService, githubService
     copyright/       # copyrightApplicationService, aiAuthorshipService, bulkCopyrightRegistration, internationalCopyright
     orchestration/   # ipAutoOrchestrator (one-click IP generation)
@@ -209,7 +209,7 @@ src/
   lib/               # supabase client, database types
   types/             # TypeScript type definitions
 netlify/
-  functions/         # search-patents, create-checkout, stripe-webhook, check-payment
+  functions/         # ai-generate, github-proxy, search-patents, create-checkout, stripe-webhook, check-payment
 supabase/
   migrations/        # 001_initial_schema.sql, 002_add_payments.sql
 ```
