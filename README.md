@@ -88,7 +88,7 @@ Build with `npm run build:lib` — outputs `dist-lib/git-patent.es.js`.
 ### Anthropic Claude API
 Core AI engine powering all generation tasks — specifications, claims, multi-dimensional novelty analysis, feature extraction, CPC classification, and more. Feature-specific token limits range from 2,048 to 8,192. The novelty analysis prompt requests structured scoring across four patent dimensions with calibrated anchors and README-grounded evaluation.
 
-- **Env var:** `VITE_ANTHROPIC_API_KEY`
+- **Env var:** `ANTHROPIC_API_KEY` (set in Netlify environment, never shipped to browser)
 
 ### Serper.dev (Google Patents)
 Real patent prior art search via the `search-patents` Netlify function. Returns patent numbers, titles, snippets, filing dates, inventors, assignees, and thumbnails.
@@ -97,9 +97,9 @@ Real patent prior art search via the `search-patents` Netlify function. Returns 
 - **Env var:** `SERPER_API_KEY` (set in Netlify environment)
 
 ### GitHub API
-Fetches repository metadata, file trees, and file contents for codebase analysis. Supports multiple URL formats. Authenticated via `VITE_GITHUB_TOKEN` for 5,000 requests/hour (vs 60/hour unauthenticated).
+Fetches repository metadata, file trees, and file contents for codebase analysis via the `github-proxy` Netlify function. Authenticated via `GITHUB_TOKEN` for 5,000 requests/hour (vs 60/hour unauthenticated).
 
-- **Env var:** `VITE_GITHUB_TOKEN` (GitHub Personal Access Token, public repo read access)
+- **Env var:** `GITHUB_TOKEN` (set in Netlify environment, never shipped to browser)
 
 ### Supabase
 PostgreSQL database with Row-Level Security for all user data — projects, patent applications, claims, drawings, prior art results, novelty analyses, copyright registrations, trademark applications, and payment records.
@@ -135,14 +135,15 @@ Add your keys to `.env`:
 ```
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_ANTHROPIC_API_KEY=your-anthropic-key
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
 VITE_INTERNAL_DOMAINS=yourcompany.com
-VITE_GITHUB_TOKEN=ghp_...      # GitHub PAT for higher API rate limits (optional but recommended)
 ```
 
 Set these in your **Netlify environment variables** (not in `.env` — they are server-side only):
 
 ```
+ANTHROPIC_API_KEY=sk-ant-...   # Anthropic Claude API key
+GITHUB_TOKEN=ghp_...           # GitHub PAT for higher API rate limits (optional but recommended)
 SERPER_API_KEY=...              # Prior art search (Serper.dev)
 STRIPE_SECRET_KEY=sk_test_...  # Stripe API secret key
 STRIPE_WEBHOOK_SECRET=whsec_...# Stripe webhook signing secret
