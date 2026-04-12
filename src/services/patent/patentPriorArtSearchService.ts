@@ -72,7 +72,7 @@ async function searchGooglePatents(params: PriorArtSearchParams, projectId: stri
     title: params.title,
     description: params.description,
     keywords: params.keywords,
-    maxResults: 10,
+    maxResults: 15,
     queries,
   });
 
@@ -92,7 +92,7 @@ async function searchGooglePatents(params: PriorArtSearchParams, projectId: stri
 }
 
 /**
- * Build 3 targeted search queries from extracted features for better coverage.
+ * Build up to 5 targeted search queries from extracted features for thorough coverage.
  */
 async function buildSearchQueries(params: PriorArtSearchParams, projectId: string): Promise<string[]> {
   try {
@@ -104,7 +104,7 @@ async function buildSearchQueries(params: PriorArtSearchParams, projectId: strin
 
     const features = featureRows || [];
     const coreFeatures = features.filter((f: any) => f.is_core_innovation || f.novelty_strength === 'strong');
-    const topFeatureNames = coreFeatures.slice(0, 3).map((f: any) => f.name);
+    const topFeatureNames = coreFeatures.slice(0, 4).map((f: any) => f.name);
 
     // Q1: Title + core feature names (broad coverage)
     const q1 = [params.title, ...topFeatureNames.slice(0, 2)].join(' ');
@@ -115,15 +115,41 @@ async function buildSearchQueries(params: PriorArtSearchParams, projectId: strin
       .map((f: any) => `${f.name} ${(f.description || '').split('.')[0]}`)
       .join(' ')
       .slice(0, 200);
-    const q2 = mechanismTerms || params.title;
+    // Avoid duplicating Q1 when features are empty — fall back to description snippet
+    const q2 = mechanismTerms || (params.description || '').slice(0, 150).trim() || params.title;
 
     // Q3: Problem/solution from description + keywords
     const descClean = (params.description || '').slice(0, 200).trim();
-    const kwStr = (params.keywords || []).slice(0, 3).join(' ');
+    const kwStr = (params.keywords || []).slice(0, 5).join(' ');
     const q3 = [descClean, kwStr].filter(Boolean).join(' ') || params.title;
 
-    console.log('Search queries:', { q1: q1.slice(0, 80), q2: q2.slice(0, 80), q3: q3.slice(0, 80) });
-    return [q1, q2, q3];
+    // Q4: Remaining feature names that weren't in Q1 (different technical angle)
+    const remainingFeatures = features.slice(2, 5).map((f: any) => f.name).join(' ');
+    const q4 = remainingFeatures
+      ? `${remainingFeatures} ${(params.keywords || []).slice(0, 2).join(' ')}`.trim()
+      : null;
+
+    // Q5: CPC-classification-guided query if available
+    let q5: string | null = null;
+    try {
+      const { data: appRow } = await (supabase as any)
+        .from('patent_applications')
+        .select('cpc_classification')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const cpcPrimary = appRow?.cpc_classification?.primary;
+      if (cpcPrimary) {
+        q5 = [cpcPrimary, ...topFeatureNames.slice(0, 2)].join(' ');
+      }
+    } catch { /* non-critical */ }
+
+    const queries = [q1, q2, q3, q4, q5].filter((q): q is string => !!q);
+    // Deduplicate queries
+    const unique = [...new Set(queries)];
+    console.log(`Search queries (${unique.length}):`, unique.map(q => q.slice(0, 80)));
+    return unique;
   } catch (err) {
     console.warn('Failed to build targeted queries, using title-only fallback:', err);
     return [params.title];
@@ -179,7 +205,7 @@ For EACH patent above, provide a relevance analysis as a JSON array. Use the EXA
 Respond with ONLY a JSON array containing one object per patent. Do NOT add patents not listed above.`;
 
   try {
-    const response = await generateText(analysisPrompt, 'patent_prior_art_search');
+    const response = await generateText(analysisPrompt, 'patent_prior_art_search', { temperature: 0.5 });
     const jsonMatch = response.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       console.warn('AI analysis returned no JSON, using unscored results');

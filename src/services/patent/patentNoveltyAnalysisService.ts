@@ -49,6 +49,14 @@ Scoring criteria:
 
 4. **prior_art_differentiation** (Differentiation Clarity): How clearly and convincingly does this invention differ from the closest prior art? Score 90+ if differences are fundamental architectural choices. Score below 40 if differences are trivial parameter changes.
 
+CRITICAL SCORING CALIBRATION — YOU MUST FOLLOW THESE:
+- Scores MUST span at least 20 points across the four dimensions. Do NOT give all four dimensions the same or similar score.
+- If this invention is a standard web application, CRUD system, or business workflow automation with no novel algorithms, scores should be in the 30-55 range — not artificially elevated.
+- Only score novelty_102 above 75 if you can identify a SPECIFIC technical mechanism not disclosed in any single prior art reference.
+- Only score non_obviousness_103 above 75 if combining the cited prior art would require a non-obvious insight, not routine engineering.
+- Do NOT default to scores in the 60-75 range out of caution. Commit to your assessment — low scores are expected for incremental work.
+- A score of 50 means "average, nothing special." Most software patents should score between 35-65 unless they contain genuinely novel techniques.
+
 Also provide qualitative analysis arrays and a composite assessment.
 
 Respond with ONLY a JSON object in this exact structure:
@@ -263,7 +271,7 @@ async function generateAINoveltyAssessment(
       readmeContent,
     });
 
-    const response = await generateText(prompt, 'patent_novelty_analysis');
+    const response = await generateText(prompt, 'patent_novelty_analysis', { temperature: 0.7 });
 
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -282,13 +290,9 @@ async function generateAINoveltyAssessment(
     console.error('AI novelty assessment failed:', error);
   }
 
+  // Return null scores so the caller knows AI failed — no fake numbers
   return {
-    scores: {
-      novelty_102: { score: 50, reasoning: 'AI assessment could not be completed. Score is a placeholder pending manual review.' },
-      non_obviousness_103: { score: 50, reasoning: 'AI assessment could not be completed. Score is a placeholder pending manual review.' },
-      technical_depth: { score: 50, reasoning: 'AI assessment could not be completed. Score is a placeholder pending manual review.' },
-      prior_art_differentiation: { score: 50, reasoning: 'AI assessment could not be completed. Score is a placeholder pending manual review.' },
-    },
+    scores: null,
     strengths: [
       'Technical implementation details are present in the codebase',
       'Features were extracted from actual source code'
@@ -305,7 +309,7 @@ async function generateAINoveltyAssessment(
       'Add specific performance metrics and benchmarks to strengthen the application',
       'Ensure the README clearly describes what makes this software different from existing solutions'
     ],
-    assessment: 'Automated novelty assessment could not be completed. The extracted features require manual review by a qualified patent professional to determine patentability. The novelty scores shown are preliminary estimates based on code analysis only and have not been validated against prior art databases.'
+    assessment: 'Automated novelty assessment could not be completed. The extracted features require manual review by a qualified patent professional to determine patentability.'
   };
 }
 
@@ -327,13 +331,13 @@ function calculateNoveltyScore(features: any[], priorArt: any[], aiScores?: {
 
   heuristic += strongFeatures * 6;
   heuristic += moderateFeatures * 3;
-  heuristic += coreInnovations * 4;
+  // Cap core innovation bonus to avoid inflation when all features are flagged as core
+  heuristic += Math.min(coreInnovations * 4, 12);
   heuristic -= weakFeatures * 1;
 
   if (priorArtSearched) {
     const highRelevanceArt = priorArt.filter((pa: any) => pa.relevance_score >= 80 || pa.relevance_score >= 0.8);
     const blockingPriorArt = priorArt.filter((pa: any) => pa.is_blocking).length;
-    const lowRelevancePriorArt = priorArt.filter((pa: any) => (pa.relevance_score < 40 || pa.relevance_score < 0.4) && !pa.is_blocking).length;
 
     // Use actual similarity scores: weight by mean similarity of high-relevance art
     const avgSimilarity = highRelevanceArt.length > 0
@@ -343,7 +347,7 @@ function calculateNoveltyScore(features: any[], priorArt: any[], aiScores?: {
     heuristic -= highRelevanceArt.length * 7;
     heuristic -= blockingPriorArt * 15;
     heuristic -= Math.round(avgSimilarity * 0.1); // Scale penalty by actual similarity
-    heuristic += lowRelevancePriorArt > 0 ? 5 : 0;
+    // No bonus for finding irrelevant art — that's noise, not signal
   } else {
     heuristic = Math.min(heuristic, 50);
   }

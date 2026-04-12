@@ -140,7 +140,7 @@ export async function generateCompletePatentApplication(
         problemSolved: (meta.problem_solved as string) || undefined,
         keyFeatures: (meta.key_features as string[]) || undefined
       };
-      features = await extractFeaturesFromInvention(inventionInput);
+      features = await extractFeaturesFromInvention(inventionInput, config.projectId);
     } else {
       features = await extractCodebaseFeatures(config.projectId);
     }

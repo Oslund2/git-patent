@@ -61,7 +61,7 @@ export default async function handler(req: Request, _context: Context) {
   const queryList: string[] = [];
 
   if (body.queries && body.queries.length > 0) {
-    queryList.push(...body.queries.slice(0, 3));
+    queryList.push(...body.queries.slice(0, 5));
   } else {
     // Fallback: single query from title + description + keywords
     const descSnippet = (body.description || "").slice(0, 120).trim();

@@ -367,9 +367,18 @@ Respond with ONLY the JSON object.`;
     setSearchingPriorArt(true);
     setError(null);
     try {
+      // Load feature names as keywords to enrich search queries
+      const { data: featureRows } = await (supabase as any)
+        .from('extracted_features')
+        .select('name')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+      const keywords = (featureRows || []).map((f: any) => f.name).slice(0, 6);
+
       await searchPriorArt(projectId, selectedApp.id, {
         title: selectedApp.title,
         description: selectedApp.invention_description || selectedApp.detailed_description || '',
+        keywords,
       });
       // Reload from DB to get normalized format
       const saved = await getPriorArtResults(selectedApp.id);

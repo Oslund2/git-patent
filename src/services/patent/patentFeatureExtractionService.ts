@@ -109,7 +109,8 @@ function generateTechnicalSummary(features: ExtractedFeature[]): string {
 }
 
 export async function extractFeaturesFromInvention(
-  invention: InventionInput
+  invention: InventionInput,
+  projectId?: string
 ): Promise<FeatureAnalysisResult> {
   const prompt = `You are a patent attorney analyzing an invention to identify patentable technical features.
 
@@ -189,6 +190,24 @@ Respond in this exact JSON format (no additional text):
   const dataStructures = features.filter(f => f.type === 'data_structure');
   const integrations = features.filter(f => f.type === 'integration');
 
+  // Persist extracted features to DB so prior art search can use them
+  if (projectId && features.length > 0) {
+    try {
+      const insertRows = features.map(f => ({
+        project_id: projectId,
+        name: f.name,
+        type: f.type,
+        description: f.description,
+        technical_details: f.technicalDetails,
+        novelty_strength: f.noveltyStrength,
+        is_core_innovation: f.isCoreInnovation,
+      }));
+      await (supabase as any).from('extracted_features').insert(insertRows);
+    } catch (err) {
+      console.warn('Failed to persist extracted features (non-critical):', err);
+    }
+  }
+
   return {
     features,
     algorithmsIdentified: algorithms,
@@ -240,15 +259,15 @@ export async function createFeatureAnalysis(
   _userId: string
 ): Promise<string> {
   const analysisResult = await extractCodebaseFeatures(projectId);
-  const noveltyScore = calculateOverallNoveltyScore(analysisResult.features);
 
+  // Insert with placeholder scores — performNoveltyAnalysis will overwrite with real AI scores
   const { data, error } = await (supabase as any)
     .from('patent_novelty_analyses')
     .insert({
       application_id: patentApplicationId,
-      overall_score: noveltyScore,
-      approval_probability: Math.min(noveltyScore + 10, 100),
-      strength_rating: noveltyScore >= 70 ? 'strong' : noveltyScore >= 40 ? 'moderate' : 'weak',
+      overall_score: 0,
+      approval_probability: 0,
+      strength_rating: 'weak',
       analysis_data: {
         extracted_features: analysisResult.features,
         service_files_analyzed: analysisResult.serviceFilesAnalyzed.length,
@@ -264,19 +283,6 @@ export async function createFeatureAnalysis(
   if (error) throw error;
 
   return data.id;
-}
-
-function calculateOverallNoveltyScore(features: ExtractedFeature[]): number {
-  const weights = { strong: 10, moderate: 5, weak: 2 };
-  let totalScore = 0;
-  let maxScore = 0;
-
-  features.forEach(feature => {
-    totalScore += weights[feature.noveltyStrength];
-    maxScore += weights.strong;
-  });
-
-  return maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 }
 
 export async function getFeatureAnalysis(
