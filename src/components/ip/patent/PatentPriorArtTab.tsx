@@ -12,7 +12,8 @@ import {
   Plus,
   FileText,
   Sparkles,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 
 interface PriorArtResult {
@@ -50,6 +51,8 @@ interface PatentPriorArtTabProps {
   onGenerateComparison: () => Promise<void>;
   comparisonReport: string | null;
   generatingComparison: boolean;
+  onRegenerateBackground?: () => Promise<void>;
+  regeneratingBackground?: boolean;
 }
 
 function normalizeScore(score: number): number {
@@ -89,7 +92,9 @@ export function PatentPriorArtTab({
   onUpdateRelevance,
   onGenerateComparison,
   comparisonReport,
-  generatingComparison
+  generatingComparison,
+  onRegenerateBackground,
+  regeneratingBackground
 }: PatentPriorArtTabProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showManualForm, setShowManualForm] = useState(false);
@@ -502,6 +507,32 @@ export function PatentPriorArtTab({
           </div>
         )}
       </div>
+
+      {/* Regenerate Background from Prior Art */}
+      {onRegenerateBackground && (
+        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+          <div className="px-5 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-amber-600" />
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900">Update Background Section</h4>
+                <p className="text-xs text-gray-500 mt-0.5">Rewrite the Background of the Invention to incorporate these prior art references</p>
+              </div>
+            </div>
+            <button
+              onClick={onRegenerateBackground}
+              disabled={regeneratingBackground || priorArtResults.length === 0}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-white bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg hover:from-amber-600 hover:to-orange-600 disabled:opacity-50 transition-all"
+            >
+              {regeneratingBackground ? (
+                <><Loader2 className="w-3 h-3 animate-spin" /> Regenerating...</>
+              ) : (
+                <><RefreshCw className="w-3 h-3" /> Regenerate Background</>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -37,6 +37,7 @@ import {
 } from '../../services/patent/patentApplicationService';
 import { generateAIEnhancedClaims } from '../../services/patent/patentClaimsService';
 import { extractCodebaseFeatures } from '../../services/patent/patentFeatureExtractionService';
+import { regenerateSection } from '../../services/patent/patentSpecificationGenerationService';
 import { generateDrawingsForApplication, regenerateSingleDrawing, svgToDataUrl } from '../../services/patent/patentDrawingsService';
 import {
   createUsptoCompliantPdf,
@@ -60,7 +61,7 @@ import {
   type AliceRiskAssessment,
 } from '../../services/patent/patentNoveltyAnalysisService';
 import { generateCoverSheetHTML } from '../../services/patent/coverSheetService';
-import { generateUsptoApplicationPdf } from '../../services/patent/usptoApplicationPdfService';
+import { generateUsptoApplicationPdf, type PriorArtForPdf } from '../../services/patent/usptoApplicationPdfService';
 import { PatentOverviewTab } from './patent/PatentOverviewTab';
 import { PatentApplicantTab } from './patent/PatentApplicantTab';
 import { PatentSpecificationTab } from './patent/PatentSpecificationTab';
@@ -435,6 +436,53 @@ Respond with ONLY the JSON object.`;
     }
   };
 
+  // --- Regenerate Background from latest Prior Art ---
+  const [regeneratingBackground, setRegeneratingBackground] = useState(false);
+  const handleRegenerateBackground = async () => {
+    if (!selectedApp || !projectId) return;
+    setRegeneratingBackground(true);
+    setError(null);
+    try {
+      const priorArtSummary = priorArtResults.map((pa: any, i: number) =>
+        `${i + 1}. ${pa.patent_number} — ${pa.patent_title || pa.title || ''}\n   Relevance: ${pa.relevance_score}/100, ${pa.is_blocking ? 'BLOCKING' : 'Non-blocking'}\n   ${pa.similarity_explanation || ''}`
+      ).join('\n\n');
+
+      const currentBackground = selectedApp.background_art || '';
+      const newBackground = await regenerateSection(
+        'Background of the Invention',
+        currentBackground,
+        `Rewrite the Background section to incorporate the following prior art references found during a patent search. Reference each relevant prior art by patent number. Discuss their limitations and how the present invention addresses gaps:\n\n${priorArtSummary}`,
+        JSON.stringify({ title: selectedApp.title, description: selectedApp.invention_description || selectedApp.detailed_description || '' }),
+        projectId
+      );
+
+      // Save updated background to DB
+      await (supabase as any)
+        .from('patent_applications')
+        .update({ background_art: newBackground })
+        .eq('id', selectedApp.id);
+
+      setSelectedApp({ ...selectedApp, background_art: newBackground });
+
+      // Also update the full specification field if it exists
+      if (selectedApp.specification) {
+        const updatedSpec = selectedApp.specification.replace(
+          /BACKGROUND OF THE INVENTION[\s\S]*?(?=SUMMARY OF THE INVENTION|$)/,
+          `BACKGROUND OF THE INVENTION\n\n${newBackground}\n\n`
+        );
+        await (supabase as any)
+          .from('patent_applications')
+          .update({ specification: updatedSpec })
+          .eq('id', selectedApp.id);
+        setSelectedApp(prev => prev ? { ...prev, specification: updatedSpec } : prev);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to regenerate background');
+    } finally {
+      setRegeneratingBackground(false);
+    }
+  };
+
   // --- Analysis handlers ---
   const handleRunNoveltyAnalysis = async () => {
     if (!selectedApp || !projectId || !user) return;
@@ -686,8 +734,21 @@ Respond with ONLY the JSON object.`;
         }
       }
 
+      // Map prior art results for PDF inclusion
+      const priorArtForPdf: PriorArtForPdf[] = priorArtResults.map((pa: any) => ({
+        patentNumber: pa.patent_number || '',
+        title: pa.patent_title || pa.title || '',
+        assignee: pa.assignee || '',
+        filingDate: pa.filing_date || '',
+        relevanceScore: pa.relevance_score,
+        similarityExplanation: pa.similarity_explanation || '',
+        isBlocking: pa.is_blocking || false,
+        riskLevel: pa.risk_level || '',
+      }));
+
       const pdf = generateUsptoApplicationPdf(selectedApp, drawingsWithImages, {
-        includeExemplaryClaims: exportOptions.includeExemplaryClaims
+        includeExemplaryClaims: exportOptions.includeExemplaryClaims,
+        priorArt: priorArtForPdf,
       });
       pdf.save(`${selectedApp.title.replace(/\s+/g, '_')}_USPTO_Application.pdf`);
     } catch (err) {
@@ -745,6 +806,25 @@ Respond with ONLY the JSON object.`;
         sectionAddText(selectedApp.specification);
       } else if (section === 'abstract' && selectedApp.abstract) {
         sectionAddText(selectedApp.abstract);
+      } else if (section === 'prior-art' && priorArtResults.length > 0) {
+        for (let i = 0; i < priorArtResults.length; i++) {
+          const pa: any = priorArtResults[i];
+          sectionEnsureSpace(50);
+          setPatentFont(pdf, 'bold');
+          pdf.setFontSize(12);
+          sectionAddText(`${i + 1}. ${pa.patent_number || 'Unknown'} — ${pa.patent_title || pa.title || ''}`);
+          setPatentFont(pdf, 'normal');
+          pdf.setFontSize(11);
+          if (pa.assignee) sectionAddText(`Assignee: ${pa.assignee}`);
+          if (pa.filing_date) sectionAddText(`Filing Date: ${pa.filing_date}`);
+          if (pa.relevance_score != null) sectionAddText(`Relevance: ${pa.relevance_score}/100${pa.is_blocking ? ' — BLOCKING' : ''}`);
+          if (pa.similarity_explanation) {
+            pdf.setFontSize(12);
+            sectionAddText(pa.similarity_explanation);
+          }
+          pdf.setFontSize(12);
+          yPos += 8;
+        }
       }
 
       addPdfAMetadata(pdf, `${selectedApp.title} - ${section}`, selectedApp.inventor_name || 'Unknown Inventor');
@@ -1015,6 +1095,8 @@ Respond with ONLY the JSON object.`;
                     onGenerateComparison={handleGenerateComparison}
                     comparisonReport={comparisonReport}
                     generatingComparison={generatingComparison}
+                    onRegenerateBackground={handleRegenerateBackground}
+                    regeneratingBackground={regeneratingBackground}
                   />
                 )}
 

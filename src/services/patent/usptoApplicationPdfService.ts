@@ -510,12 +510,84 @@ function renderDrawingPages(
   }
 }
 
+/**
+ * Section: Prior Art References — lists prior art found during search
+ */
+function renderPriorArtReferences(
+  pdf: jsPDF,
+  priorArt: PriorArtForPdf[],
+  yPos: number
+): number {
+  if (priorArt.length === 0) return yPos;
+  const maxWidth = getMaxTextWidth(pdf);
+
+  yPos = addSectionHeader(pdf, 'PRIOR ART REFERENCES', yPos, false);
+
+  // Introductory text
+  setPatentFont(pdf, 'normal');
+  pdf.setFontSize(BODY_FONT_SIZE);
+  yPos = addBodyText(
+    pdf,
+    'The following prior art references were identified during a comprehensive patent search and are believed to be relevant to the present invention:',
+    yPos,
+    maxWidth
+  );
+  yPos += PARAGRAPH_SPACING;
+
+  for (let i = 0; i < priorArt.length; i++) {
+    const pa = priorArt[i];
+    yPos = ensureSpace(pdf, yPos, 60);
+
+    // Patent number + title (bold)
+    setPatentFont(pdf, 'bold');
+    pdf.setFontSize(BODY_FONT_SIZE);
+    const refHeader = `${i + 1}. ${pa.patentNumber} — ${pa.title}`;
+    yPos = addBodyText(pdf, refHeader, yPos, maxWidth);
+
+    // Details
+    setPatentFont(pdf, 'normal');
+    pdf.setFontSize(11);
+    if (pa.assignee) {
+      yPos = addBodyText(pdf, `Assignee: ${pa.assignee}`, yPos, maxWidth);
+    }
+    if (pa.filingDate) {
+      yPos = addBodyText(pdf, `Filing Date: ${pa.filingDate}`, yPos, maxWidth);
+    }
+    if (pa.relevanceScore !== undefined) {
+      const riskLabel = pa.isBlocking ? 'BLOCKING' : pa.riskLevel ? pa.riskLevel.toUpperCase() : '';
+      yPos = addBodyText(pdf, `Relevance: ${pa.relevanceScore}/100${riskLabel ? ` — Risk: ${riskLabel}` : ''}`, yPos, maxWidth);
+    }
+    if (pa.similarityExplanation) {
+      pdf.setFontSize(BODY_FONT_SIZE);
+      yPos = addBodyText(pdf, pa.similarityExplanation, yPos, maxWidth);
+    }
+
+    pdf.setFontSize(BODY_FONT_SIZE);
+    yPos += PARAGRAPH_SPACING;
+  }
+
+  yPos += SECTION_SPACING;
+  return yPos;
+}
+
 // ============================================================
 // Main export function
 // ============================================================
 
+export interface PriorArtForPdf {
+  patentNumber: string;
+  title: string;
+  assignee?: string;
+  filingDate?: string;
+  relevanceScore?: number;
+  similarityExplanation?: string;
+  isBlocking?: boolean;
+  riskLevel?: string;
+}
+
 export interface UsptoExportOptions {
   includeExemplaryClaims?: boolean;
+  priorArt?: PriorArtForPdf[];
 }
 
 /**
@@ -565,7 +637,12 @@ export function generateUsptoApplicationPdf(
   yPos = renderDetailedDescription(pdf, application, yPos, parsedSections);
 
   // Abstract of the Disclosure (repeated at end of specification)
-  renderAbstractRepeat(pdf, application, yPos);
+  yPos = renderAbstractRepeat(pdf, application, yPos);
+
+  // Prior Art References (if provided)
+  if (options.priorArt && options.priorArt.length > 0) {
+    renderPriorArtReferences(pdf, options.priorArt, yPos);
+  }
 
   // Claims (new page)
   renderClaims(pdf, application, options.includeExemplaryClaims || false);
