@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import type { CodeFile } from '../../types';
-import { fetchRepoMetadata, fetchRepoTree, fetchRepoFiles, parseGitHubUrl, fetchReadmeContent } from './githubService';
+import { fetchRepoMetadata, fetchRepoTree, fetchRepoFiles, parseGitHubUrl } from './githubService';
 
 const MAX_FILE_SIZE = 100 * 1024; // 100KB per file
 const MAX_FILES = 500;
@@ -134,8 +134,9 @@ export async function ingestFromZip(file: File): Promise<{ files: CodeFile[]; re
  * Ingest from GitHub using the CORS-friendly Git Trees + Blobs API.
  * 1. Fetch repo metadata (1 request)
  * 2. Fetch full tree (1 request)
- * 3. Filter to analyzable files
- * 4. Fetch each file's content via Blobs API (1 request per file, batched)
+ * 3. Find README in tree and fetch its blob (1 request)
+ * 4. Filter to analyzable files
+ * 5. Fetch each file's content via Blobs API (1 request per file, batched)
  */
 export async function ingestFromGitHub(
   repoUrl: string,
@@ -151,12 +152,24 @@ export async function ingestFromGitHub(
   // Step 2: Get full file tree (single request, CORS-friendly)
   const tree = await fetchRepoTree(parsed.owner, parsed.repo, metadata.defaultBranch, token);
 
-  // Step 3: Fetch README BEFORE file contents to avoid GitHub rate limit exhaustion
-  // (unauthenticated limit is 60 req/hour; file fetches can consume all of them)
+  // Step 3: Find README in the tree we already have — no extra API call needed.
+  // The tree contains every blob with its SHA, so we can fetch it via the same
+  // blobs endpoint used for all other files. This avoids the fragile 3-strategy
+  // fallback in the readme proxy action which could silently return null on
+  // transient GitHub API errors or rate limits.
   let readmeContent: string | null = null;
-  try {
-    readmeContent = await fetchReadmeContent(parsed.owner, parsed.repo, metadata.defaultBranch, token);
-  } catch { /* README is optional */ }
+  const readmeTreeEntry = tree.find(entry => {
+    const name = entry.path.split('/').pop() || '';
+    return /^readme(\.(md|txt|rst|markdown))?$/i.test(name) && !entry.path.includes('/');
+  });
+  if (readmeTreeEntry) {
+    try {
+      const readmeFiles = await fetchRepoFiles(parsed.owner, parsed.repo, [readmeTreeEntry]);
+      if (readmeFiles.length > 0 && readmeFiles[0].content) {
+        readmeContent = readmeFiles[0].content.slice(0, 10000);
+      }
+    } catch { /* README is optional */ }
+  }
 
   // Step 4: Filter to analyzable code files
   const analyzable = tree
