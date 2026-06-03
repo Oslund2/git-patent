@@ -1,6 +1,8 @@
 import type { Context } from "@netlify/functions";
 
-const CLAUDE_MODEL = "claude-sonnet-4-20250514";
+// Default to Claude Opus 4.8; override without a code deploy via the
+// ANTHROPIC_MODEL Netlify env var.
+const CLAUDE_MODEL = Netlify.env.get("ANTHROPIC_MODEL") || "claude-opus-4-8";
 const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 
 const FEATURE_TOKEN_LIMITS: Record<string, number> = {
@@ -65,8 +67,8 @@ export default async function handler(req: Request, _context: Context) {
     body.maxTokens || FEATURE_TOKEN_LIMITS[featureArea] || 2048;
   const temperature = body.temperature ?? 0.3;
 
-  try {
-    const response = await fetch(ANTHROPIC_API, {
+  const send = (includeTemperature: boolean) =>
+    fetch(ANTHROPIC_API, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -76,11 +78,30 @@ export default async function handler(req: Request, _context: Context) {
       body: JSON.stringify({
         model: CLAUDE_MODEL,
         max_tokens: maxTokens,
-        temperature,
+        // `temperature` is deprecated/rejected by newer models (e.g. Claude
+        // Opus 4.8); only include it when supported. We retry without it below.
+        ...(includeTemperature ? { temperature } : {}),
         messages: [{ role: "user", content: body.prompt }],
       }),
       signal: AbortSignal.timeout(90000),
     });
+
+  try {
+    let response = await send(true);
+
+    // Newer models reject `temperature` with a 400. Detect that specific case
+    // and retry once without it, so a model swap can't break the whole pipeline.
+    if (response.status === 400) {
+      const errText = await response.text();
+      if (/temperature/i.test(errText)) {
+        response = await send(false);
+      } else {
+        return new Response(
+          JSON.stringify({ error: "Claude API error (400)", detail: errText.substring(0, 500) }),
+          { status: 502, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     if (!response.ok) {
       const errorBody = await response.text();
