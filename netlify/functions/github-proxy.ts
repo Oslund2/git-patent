@@ -84,11 +84,16 @@ async function handleMetadata(
 
   if (!response.ok) {
     const status = response.status;
+    const hasToken = !!headers.Authorization;
     const msg =
       status === 404
-        ? "Repository not found"
+        ? hasToken
+          ? "Repository not found"
+          : "Repository not found — if it is private, set GITHUB_TOKEN to analyze private repos"
         : status === 403
-          ? "GitHub API rate limit reached"
+          ? hasToken
+            ? "GitHub API rate limit reached"
+            : "GitHub API rate limit reached (unauthenticated, 60/hr) — set GITHUB_TOKEN for a higher limit"
           : `GitHub API error: ${status}`;
     return new Response(JSON.stringify({ error: msg }), {
       status,
