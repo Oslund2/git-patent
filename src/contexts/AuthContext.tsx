@@ -6,9 +6,12 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  passwordRecovery: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithGitHub: () => Promise<{ error: Error | null }>;
+  resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  updatePassword: (password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -18,6 +21,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  // True after the user follows a password-reset link. The recovery link
+  // establishes a temporary session, so we use this flag (not `user`) to show
+  // the reset-password screen instead of the dashboard.
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   useEffect(() => {
     // Clear any legacy guest mode from localStorage
@@ -29,7 +36,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true);
+      }
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -59,14 +69,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   };
 
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+    return { error: error as Error | null };
+  };
+
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (!error) setPasswordRecovery(false);
+    return { error: error as Error | null };
+  };
+
   const signOut = async () => {
     setUser(null);
     setSession(null);
+    setPasswordRecovery(false);
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signInWithGitHub, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, passwordRecovery, signIn, signUp, signInWithGitHub, resetPassword, updatePassword, signOut }}>
       {children}
     </AuthContext.Provider>
   );

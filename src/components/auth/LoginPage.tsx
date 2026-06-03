@@ -4,10 +4,11 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface LoginPageProps {
   onToggleSignUp: () => void;
+  onForgotPassword: () => void;
   onTerms?: () => void;
 }
 
-export function LoginPage({ onToggleSignUp, onTerms }: LoginPageProps) {
+export function LoginPage({ onToggleSignUp, onForgotPassword, onTerms }: LoginPageProps) {
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -192,7 +193,16 @@ export function LoginPage({ onToggleSignUp, onTerms }: LoginPageProps) {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-medium text-gray-700">Password</label>
+                <button
+                  type="button"
+                  onClick={onForgotPassword}
+                  className="text-xs font-medium text-patent-600 hover:text-indigo-600 transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
                 <input

@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProjectProvider, useProject } from './contexts/ProjectContext';
 import { LoginPage } from './components/auth/LoginPage';
 import { SignUpPage } from './components/auth/SignUpPage';
+import { ForgotPasswordPage } from './components/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './components/auth/ResetPasswordPage';
 import { CodebaseUpload } from './components/analysis/CodebaseUpload';
 import { ProjectList } from './components/analysis/ProjectList';
 import { IPDashboard } from './components/ip/IPDashboard';
@@ -30,11 +32,11 @@ function Footer({ onTerms }: { onTerms: () => void }) {
 }
 
 function AppContent() {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading, passwordRecovery, signOut } = useAuth();
   const { currentProject, selectProject, refreshProjects } = useProject();
   const { isInternalUser } = usePaymentGate();
   const [view, setView] = useState<View>('projects');
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot'>('login');
   const [paidProjectId, setPaidProjectId] = useState<string | null>(null);
   const [paymentBanner, setPaymentBanner] = useState<'success' | 'cancelled' | null>(null);
 
@@ -70,6 +72,12 @@ function AppContent() {
     );
   }
 
+  // A password-reset link signs the user in with a temporary session, so this
+  // must be checked before the `!user` branch and the dashboard render.
+  if (passwordRecovery) {
+    return <ResetPasswordPage onDone={() => setView('projects')} />;
+  }
+
   if (view === 'terms') {
     return <TermsOfService onBack={() => setView('projects')} />;
   }
@@ -78,7 +86,16 @@ function AppContent() {
     if (authMode === 'signup') {
       return <SignUpPage onToggleLogin={() => setAuthMode('login')} onTerms={() => setView('terms')} />;
     }
-    return <LoginPage onToggleSignUp={() => setAuthMode('signup')} onTerms={() => setView('terms')} />;
+    if (authMode === 'forgot') {
+      return <ForgotPasswordPage onBackToLogin={() => setAuthMode('login')} />;
+    }
+    return (
+      <LoginPage
+        onToggleSignUp={() => setAuthMode('signup')}
+        onForgotPassword={() => setAuthMode('forgot')}
+        onTerms={() => setView('terms')}
+      />
+    );
   }
 
   const handleSelectProject = (project: Project) => {
