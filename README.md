@@ -36,6 +36,7 @@ The auto-orchestrator clusters your codebase features into patentable innovation
 
 ### Authentication & Payments
 - **Sign-in required** — all users must create an account (email/password via Supabase Auth)
+- **Password reset** — self-service "Forgot password?" flow: users request a reset link by email and set a new password via a dedicated reset screen (Supabase `resetPasswordForEmail` + `PASSWORD_RECOVERY` handling)
 - **Internal user bypass** — `@scripps.com` employees get free, unlimited access (configurable domain allowlist)
 - **Stripe Checkout** — external users pay a one-time $49 fee per project via Stripe-hosted checkout
 - **Webhook-driven** — payment confirmation is handled server-side via Stripe webhooks with signature verification
@@ -190,7 +191,7 @@ Deploys to Netlify out of the box — `netlify.toml` is preconfigured with the b
 src/
   components/
     analysis/        # CodebaseUpload, ProjectList, AnalysisResults
-    auth/            # LoginPage, SignUpPage
+    auth/            # LoginPage, SignUpPage, ForgotPasswordPage, ResetPasswordPage
     legal/           # TermsOfService
     embed/           # GitPatentWidget (embeddable)
     ip/              # IPDashboard, PatentApplication, CopyrightApplication, TrademarkApplication
@@ -217,6 +218,7 @@ supabase/
 ## Authentication
 
 - **Email/password** — standard Supabase auth (required for all users)
+- **Password reset** — "Forgot password?" on the login page sends a reset link; the link returns the user to the app where they set a new password. The redirect target is `window.location.origin`, so the deployed URL (e.g. `https://git-patent.netlify.app`) **must be added to the Supabase project's Authentication → URL Configuration** (Site URL + Redirect URLs) or the link falls back to localhost. Note: the default Supabase SMTP is rate-limited — configure a custom SMTP provider for production volume.
 - **Internal domains** — `@scripps.com` users get free access; configurable via `VITE_INTERNAL_DOMAINS`
 - **External users** — must pay via Stripe before running the analysis pipeline
 
