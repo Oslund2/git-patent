@@ -8,6 +8,8 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+
+[functions."ai-generate"]
   timeout = 26
 
 [[redirects]]
