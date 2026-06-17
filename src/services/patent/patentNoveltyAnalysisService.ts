@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { pipelineUpdate } from '../../lib/pipelineWrite';
 import { generateText } from '../ai/geminiService';
 import { extractCodebaseFeatures, createFeatureAnalysis, createFeatureMappings } from './patentFeatureExtractionService';
 import { getPriorArtResults } from './patentPriorArtSearchService';
@@ -220,13 +221,10 @@ export async function performNoveltyAnalysis(
 
   await updateAnalysisScores(analysisId, overallScore, approvalProbability, aiAssessment);
 
-  await (supabase as any)
-    .from('patent_applications')
-    .update({
-      novelty_analysis_id: analysisId,
-      novelty_score: overallScore
-    })
-    .eq('id', patentApplicationId);
+  await pipelineUpdate(patentApplicationId, {
+    novelty_analysis_id: analysisId,
+    novelty_score: overallScore,
+  });
 
   return {
     analysisId,
@@ -570,10 +568,7 @@ export async function performAliceRiskAssessment(
           .eq('id', patentApplicationId)
           .maybeSingle();
         const existingMeta = (existingApp?.metadata || {}) as Record<string, unknown>;
-        await (supabase as any)
-          .from('patent_applications')
-          .update({ metadata: { ...existingMeta, alice_risk_score: riskScore } })
-          .eq('id', patentApplicationId);
+        await pipelineUpdate(patentApplicationId, { metadata: { ...existingMeta, alice_risk_score: riskScore } });
       } catch { /* non-critical */ }
 
       return {

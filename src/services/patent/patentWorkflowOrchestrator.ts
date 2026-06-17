@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { pipelineUpdate } from '../../lib/pipelineWrite';
 import { searchPriorArt, getPriorArtResults } from './patentPriorArtSearchService';
 import { performNoveltyAnalysis, type NoveltyAnalysis } from './patentNoveltyAnalysisService';
 import { generateComprehensiveDifferentiation, getDifferentiationReports, type DifferentiationReport } from './patentDifferentiationService';
@@ -92,14 +93,9 @@ export async function generateCompletePatentApplication(
   };
   let baseMeta: Record<string, unknown> = {};
   const saveLog = async (stage: string) => {
-    try {
-      await (supabase as any)
-        .from('patent_applications')
-        .update({ metadata: { ...baseMeta, pipeline_log: pipelineLog, pipeline_stage: stage }, updated_at: new Date().toISOString() })
-        .eq('id', config.applicationId);
-    } catch (logErr) {
-      console.error('[Pipeline] log save failed:', logErr);
-    }
+    await pipelineUpdate(config.applicationId, {
+      metadata: { ...baseMeta, pipeline_log: pipelineLog, pipeline_stage: stage },
+    });
   };
 
   try {
@@ -275,38 +271,21 @@ export async function generateCompletePatentApplication(
 
       const concatenatedSpecification = formatSpecificationSections(specification);
 
-      const { error: specSaveError } = await (supabase as any)
-        .from('patent_applications')
-        .update({
-          field_of_invention: specification.field || null,
-          background_art: specification.background || null,
-          summary_invention: specification.summary || null,
-          detailed_description: specification.detailedDescription || null,
-          abstract: specification.abstract || null,
-          specification: concatenatedSpecification || null,
-          specification_generation_status: 'completed',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', config.applicationId);
-
-      if (specSaveError) {
-        plog(`spec_save ERROR: ${specSaveError.message}`);
-        await saveLog('spec_save_failed');
-        await (supabase as any)
-          .from('patent_applications')
-          .update({ specification_generation_status: 'failed', updated_at: new Date().toISOString() })
-          .eq('id', config.applicationId);
-      } else {
-        plog('spec_save ok');
-        updateProgress('Specification generation completed', 'completed', { sections: 5 });
-      }
+      await pipelineUpdate(config.applicationId, {
+        field_of_invention: specification.field || null,
+        background_art: specification.background || null,
+        summary_invention: specification.summary || null,
+        detailed_description: specification.detailedDescription || null,
+        abstract: specification.abstract || null,
+        specification: concatenatedSpecification || null,
+        specification_generation_status: 'completed',
+      });
+      plog('spec_save ok');
+      updateProgress('Specification generation completed', 'completed', { sections: 5 });
     } catch (specError) {
       plog(`spec_generation ERROR: ${specError instanceof Error ? specError.message : String(specError)}`);
       await saveLog('spec_generation_failed');
-      await (supabase as any)
-        .from('patent_applications')
-        .update({ specification_generation_status: 'failed', updated_at: new Date().toISOString() })
-        .eq('id', config.applicationId);
+      await pipelineUpdate(config.applicationId, { specification_generation_status: 'failed' });
     }
 
     if (config.useAIClaims) {
@@ -326,17 +305,11 @@ export async function generateCompletePatentApplication(
         const firstClaimPreview = firstIndependent ? firstIndependent.claim_text.substring(0, 200) : '';
         updateProgress('Claims generation completed', 'completed', { claimsCount: claims.length, firstClaimPreview });
 
-        await (supabase as any)
-          .from('patent_applications')
-          .update({ claims_generation_status: 'completed', updated_at: new Date().toISOString() })
-          .eq('id', config.applicationId);
+        await pipelineUpdate(config.applicationId, { claims_generation_status: 'completed' });
       } catch (claimsError) {
         plog(`claims_generation ERROR: ${claimsError instanceof Error ? claimsError.message : String(claimsError)}`);
         await saveLog('claims_generation_failed');
-        await (supabase as any)
-          .from('patent_applications')
-          .update({ claims_generation_status: 'failed', updated_at: new Date().toISOString() })
-          .eq('id', config.applicationId);
+        await pipelineUpdate(config.applicationId, { claims_generation_status: 'failed' });
       }
     }
 
@@ -347,21 +320,14 @@ export async function generateCompletePatentApplication(
       plog(`drawings_generation ok count=${drawings.length}`);
       updateProgress('Drawings generation completed', 'completed', { drawingsCount: drawings.length });
 
-      await (supabase as any)
-        .from('patent_applications')
-        .update({
-          drawings_generation_status: 'completed',
-          full_application_status: 'completed',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', config.applicationId);
+      await pipelineUpdate(config.applicationId, {
+        drawings_generation_status: 'completed',
+        full_application_status: 'completed',
+      });
     } catch (drawingsError) {
       plog(`drawings_generation ERROR: ${drawingsError instanceof Error ? drawingsError.message : String(drawingsError)}`);
       await saveLog('drawings_generation_failed');
-      await (supabase as any)
-        .from('patent_applications')
-        .update({ drawings_generation_status: 'failed', updated_at: new Date().toISOString() })
-        .eq('id', config.applicationId);
+      await pipelineUpdate(config.applicationId, { drawings_generation_status: 'failed' });
     }
 
     plog('pipeline complete');
