@@ -1,9 +1,28 @@
 import type { Context } from "@netlify/functions";
 
-// Default to Claude Opus 4.8; override without a code deploy via the
-// ANTHROPIC_MODEL Netlify env var.
+// Default to Claude Opus 4.8 for high-reasoning tasks; override via ANTHROPIC_MODEL.
+// Spec/drawing/synthesis calls use Sonnet (faster, well within the 23s timeout).
 const CLAUDE_MODEL = Netlify.env.get("ANTHROPIC_MODEL") || "claude-opus-4-8";
+const FAST_MODEL = Netlify.env.get("ANTHROPIC_MODEL_FAST") || "claude-sonnet-4-6";
 const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
+
+// Feature areas that use the fast model (latency-sensitive, prose output)
+const FAST_MODEL_FEATURES = new Set([
+  "patent_specification_field",
+  "patent_specification_background",
+  "patent_specification_summary",
+  "patent_specification_detailed",
+  "patent_abstract_generation",
+  "patent_drawings",
+  "patent_drawing_generation",
+  "patent_callout_enhancement",
+  "patent_differentiation",
+  "feature_synthesis",
+  "codebase_analysis",
+  "patent_feature_extraction",
+  "copyright_analysis",
+  "trademark_analysis",
+]);
 
 const FEATURE_TOKEN_LIMITS: Record<string, number> = {
   patent_specification: 4096,
@@ -71,6 +90,7 @@ export default async function handler(req: Request, _context: Context) {
   const maxTokens =
     body.maxTokens || FEATURE_TOKEN_LIMITS[featureArea] || 2048;
   const temperature = body.temperature ?? 0.3;
+  const model = FAST_MODEL_FEATURES.has(featureArea) ? FAST_MODEL : CLAUDE_MODEL;
 
   const send = (includeTemperature: boolean) =>
     fetch(ANTHROPIC_API, {
@@ -81,7 +101,7 @@ export default async function handler(req: Request, _context: Context) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: CLAUDE_MODEL,
+        model,
         max_tokens: maxTokens,
         // `temperature` is deprecated/rejected by newer models (e.g. Claude
         // Opus 4.8); only include it when supported. We retry without it below.
