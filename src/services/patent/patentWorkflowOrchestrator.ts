@@ -1,7 +1,7 @@
 import { supabase } from '../../lib/supabase';
 import { searchPriorArt, getPriorArtResults } from './patentPriorArtSearchService';
 import { performNoveltyAnalysis, type NoveltyAnalysis } from './patentNoveltyAnalysisService';
-import { generateComprehensiveDifferentiation, getDifferentiationReports } from './patentDifferentiationService';
+import { generateComprehensiveDifferentiation, getDifferentiationReports, type DifferentiationReport } from './patentDifferentiationService';
 import { generateIntelligentSpecification, type SpecificationSections, type InventionContext } from './patentSpecificationGenerationService';
 import { generateAIEnhancedClaims } from './patentClaimsService';
 import { extractCodebaseFeatures, extractFeaturesFromInvention, type InventionInput } from './patentFeatureExtractionService';
@@ -148,11 +148,26 @@ export async function generateCompletePatentApplication(
     updateProgress('Feature extraction completed', 'completed', { featureCount: features.features.length, topFeatures });
 
     updateProgress('Analyzing patentability and novelty...');
-    const noveltyAnalysis = await performNoveltyAnalysis(
-      config.projectId,
-      config.applicationId,
-      config.userId
-    );
+    let noveltyAnalysis: NoveltyAnalysis;
+    try {
+      noveltyAnalysis = await performNoveltyAnalysis(
+        config.projectId,
+        config.applicationId,
+        config.userId
+      );
+    } catch (noveltyError) {
+      console.error('Novelty analysis failed, using defaults:', noveltyError);
+      noveltyAnalysis = {
+        analysisId: '',
+        overallScore: 0,
+        approvalProbability: 0,
+        strengths: [],
+        weaknesses: [],
+        recommendations: [],
+        featureNoveltyScores: {},
+        patentabilityAssessment: ''
+      };
+    }
     updateProgress('Novelty analysis completed', 'completed', {
       score: noveltyAnalysis.overallScore,
       confidence: noveltyAnalysis.approvalProbability
@@ -181,13 +196,24 @@ export async function generateCompletePatentApplication(
       console.error('Failed to load prior art results, continuing without:', priorArtLoadError);
     }
 
-    const differentiationReports = await getDifferentiationReports(config.applicationId);
+    let differentiationReports: DifferentiationReport[] = [];
+    try {
+      differentiationReports = await getDifferentiationReports(config.applicationId);
+    } catch (drError) {
+      console.error('Failed to load differentiation reports:', drError);
+    }
 
-    const { data: existingDrawings } = await (supabase as any)
-      .from('patent_drawings')
-      .select('figure_number, title, svg_content, blocks')
-      .eq('application_id', config.applicationId)
-      .order('figure_number', { ascending: true });
+    let existingDrawings: any[] | null = null;
+    try {
+      const { data: drawingsData } = await (supabase as any)
+        .from('patent_drawings')
+        .select('figure_number, title, svg_content, blocks')
+        .eq('application_id', config.applicationId)
+        .order('figure_number', { ascending: true });
+      existingDrawings = drawingsData;
+    } catch (drawingsLoadError) {
+      console.error('Failed to load existing drawings:', drawingsLoadError);
+    }
 
     const inventionContext: InventionContext | undefined = hasInventionDescription ? {
       description: inventionDesc,
