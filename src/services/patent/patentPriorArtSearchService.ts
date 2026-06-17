@@ -357,7 +357,10 @@ export async function getPriorArtResults(
     .eq('application_id', patentApplicationId)
     .order('relevance_score', { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    console.error('getPriorArtResults failed, returning empty array:', error);
+    return [];
+  }
 
   // Map database columns to UI-expected field names
   const meta = (r: any) => r.metadata || {};

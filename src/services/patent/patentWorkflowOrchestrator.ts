@@ -173,7 +173,14 @@ export async function generateCompletePatentApplication(
     }
 
     updateProgress('Generating specification (Field, Background, Summary, Description, Abstract)...');
-    const priorArt = await getPriorArtResults(config.applicationId);
+
+    let priorArt: any[] = [];
+    try {
+      priorArt = await getPriorArtResults(config.applicationId);
+    } catch (priorArtLoadError) {
+      console.error('Failed to load prior art results, continuing without:', priorArtLoadError);
+    }
+
     const differentiationReports = await getDifferentiationReports(config.applicationId);
 
     const { data: existingDrawings } = await (supabase as any)
@@ -188,78 +195,106 @@ export async function generateCompletePatentApplication(
       problemSolved: (meta.problem_solved as string) || undefined
     } : undefined;
 
-    const specification = await generateIntelligentSpecification(
-      config.title,
-      features.features,
-      priorArt,
-      differentiationReports,
-      inventionContext,
-      config.projectId,
-      existingDrawings || undefined
-    );
-
-    // Create concatenated specification including Brief Description of Drawings
-    const concatenatedSpecification = formatSpecificationSections(specification);
-
-    const { error: specSaveError } = await (supabase as any)
-      .from('patent_applications')
-      .update({
-        field_of_invention: specification.field,
-        background_art: specification.background,
-        summary_invention: specification.summary,
-        detailed_description: specification.detailedDescription,
-        abstract: specification.abstract,
-        specification: concatenatedSpecification,
-        specification_generation_status: 'completed',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', config.applicationId);
-
-    if (specSaveError) {
-      throw new Error(`Failed to save specification to database: ${specSaveError.message}`);
-    }
-
-    updateProgress('Specification generation completed', 'completed', { sections: 5 });
-
-    if (config.useAIClaims) {
-      updateProgress('Generating independent and dependent claims...');
-      const claims = await generateAIEnhancedClaims(
-        config.applicationId,
-        features.features,
-        noveltyAnalysis,
-        config.projectId,
+    let specification: SpecificationSections | null = null;
+    try {
+      specification = await generateIntelligentSpecification(
         config.title,
-        inventionDesc
+        features.features,
+        priorArt,
+        differentiationReports,
+        inventionContext,
+        config.projectId,
+        existingDrawings || undefined
       );
-      const firstIndependent = claims.find((c: any) => c.claim_type === 'independent');
-      const firstClaimPreview = firstIndependent ? firstIndependent.claim_text.substring(0, 200) : '';
-      updateProgress('Claims generation completed', 'completed', { claimsCount: claims.length, firstClaimPreview });
 
+      const concatenatedSpecification = formatSpecificationSections(specification);
+
+      const { error: specSaveError } = await (supabase as any)
+        .from('patent_applications')
+        .update({
+          field_of_invention: specification.field || null,
+          background_art: specification.background || null,
+          summary_invention: specification.summary || null,
+          detailed_description: specification.detailedDescription || null,
+          abstract: specification.abstract || null,
+          specification: concatenatedSpecification || null,
+          specification_generation_status: 'completed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', config.applicationId);
+
+      if (specSaveError) {
+        console.error('Spec save error:', specSaveError);
+        await (supabase as any)
+          .from('patent_applications')
+          .update({ specification_generation_status: 'failed', updated_at: new Date().toISOString() })
+          .eq('id', config.applicationId);
+      } else {
+        updateProgress('Specification generation completed', 'completed', { sections: 5 });
+      }
+    } catch (specError) {
+      console.error('Specification generation failed, continuing to claims/drawings:', specError);
       await (supabase as any)
         .from('patent_applications')
-        .update({ claims_generation_status: 'completed', updated_at: new Date().toISOString() })
+        .update({ specification_generation_status: 'failed', updated_at: new Date().toISOString() })
         .eq('id', config.applicationId);
     }
 
-    updateProgress('Generating patent drawings from features...');
-    const drawings = await generateDrawingsForApplication(config.applicationId, config.projectId);
-    updateProgress('Drawings generation completed', 'completed', { drawingsCount: drawings.length });
+    if (config.useAIClaims) {
+      try {
+        updateProgress('Generating independent and dependent claims...');
+        const claims = await generateAIEnhancedClaims(
+          config.applicationId,
+          features.features,
+          noveltyAnalysis,
+          config.projectId,
+          config.title,
+          inventionDesc
+        );
+        const firstIndependent = claims.find((c: any) => c.claim_type === 'independent');
+        const firstClaimPreview = firstIndependent ? firstIndependent.claim_text.substring(0, 200) : '';
+        updateProgress('Claims generation completed', 'completed', { claimsCount: claims.length, firstClaimPreview });
 
-    await (supabase as any)
-      .from('patent_applications')
-      .update({
-        drawings_generation_status: 'completed',
-        full_application_status: 'completed',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', config.applicationId);
+        await (supabase as any)
+          .from('patent_applications')
+          .update({ claims_generation_status: 'completed', updated_at: new Date().toISOString() })
+          .eq('id', config.applicationId);
+      } catch (claimsError) {
+        console.error('Claims generation failed, continuing to drawings:', claimsError);
+        await (supabase as any)
+          .from('patent_applications')
+          .update({ claims_generation_status: 'failed', updated_at: new Date().toISOString() })
+          .eq('id', config.applicationId);
+      }
+    }
+
+    try {
+      updateProgress('Generating patent drawings from features...');
+      const drawings = await generateDrawingsForApplication(config.applicationId, config.projectId);
+      updateProgress('Drawings generation completed', 'completed', { drawingsCount: drawings.length });
+
+      await (supabase as any)
+        .from('patent_applications')
+        .update({
+          drawings_generation_status: 'completed',
+          full_application_status: 'completed',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', config.applicationId);
+    } catch (drawingsError) {
+      console.error('Drawings generation failed:', drawingsError);
+      await (supabase as any)
+        .from('patent_applications')
+        .update({ drawings_generation_status: 'failed', updated_at: new Date().toISOString() })
+        .eq('id', config.applicationId);
+    }
 
     return {
       success: true,
       applicationId: config.applicationId,
       noveltyAnalysis,
       priorArtCount: priorArt.length,
-      specification,
+      specification: specification ?? undefined,
       claimsCount: config.useAIClaims ? (await getClaimsCount(config.applicationId)) : 0
     };
 

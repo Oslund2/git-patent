@@ -7,6 +7,11 @@ const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 
 const FEATURE_TOKEN_LIMITS: Record<string, number> = {
   patent_specification: 4096,
+  patent_specification_field: 600,
+  patent_specification_background: 900,
+  patent_specification_summary: 700,
+  patent_specification_detailed: 900,
+  patent_abstract_generation: 400,
   patent_claims: 8192,
   patent_prior_art_search: 8192,
   patent_prior_art_comparison: 4096,
@@ -83,7 +88,7 @@ export default async function handler(req: Request, _context: Context) {
         ...(includeTemperature ? { temperature } : {}),
         messages: [{ role: "user", content: body.prompt }],
       }),
-      signal: AbortSignal.timeout(90000),
+      signal: AbortSignal.timeout(23000),
     });
 
   try {

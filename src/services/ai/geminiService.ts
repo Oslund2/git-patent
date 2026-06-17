@@ -28,9 +28,9 @@ export async function generateText(
 
   const controller = new AbortController();
   const timeout = setTimeout(() => {
-    console.error(`[AI] Request timed out after 90s (${featureArea})`);
+    console.error(`[AI] Request timed out after 28s (${featureArea})`);
     controller.abort();
-  }, 90000);
+  }, 28000);
 
   try {
     const response = await fetch('/.netlify/functions/ai-generate', {
