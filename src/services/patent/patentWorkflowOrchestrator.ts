@@ -82,6 +82,26 @@ export async function generateCompletePatentApplication(
     });
   };
 
+  // Pipeline logging — written to metadata.pipeline_log so it's queryable from the DB
+  const pipelineLog: string[] = [];
+  const ts = () => new Date().toISOString().slice(11, 23);
+  const plog = (msg: string) => {
+    const entry = `${ts()} ${msg}`;
+    pipelineLog.push(entry);
+    console.log('[Pipeline]', entry);
+  };
+  let baseMeta: Record<string, unknown> = {};
+  const saveLog = async (stage: string) => {
+    try {
+      await (supabase as any)
+        .from('patent_applications')
+        .update({ metadata: { ...baseMeta, pipeline_log: pipelineLog, pipeline_stage: stage }, updated_at: new Date().toISOString() })
+        .eq('id', config.applicationId);
+    } catch (logErr) {
+      console.error('[Pipeline] log save failed:', logErr);
+    }
+  };
+
   try {
     const { data: appData } = await (supabase as any)
       .from('patent_applications')
@@ -90,6 +110,7 @@ export async function generateCompletePatentApplication(
       .single();
 
     const meta = (appData?.metadata || {}) as Record<string, unknown>;
+    baseMeta = meta; // capture so saveLog() can merge without overwriting other metadata keys
     let inventionDesc = appData?.detailed_description || '';
 
     // If no README in invention description, try loading from project
@@ -112,6 +133,9 @@ export async function generateCompletePatentApplication(
 
     const hasInventionDescription = inventionDesc.trim().length > 0;
 
+    plog(`start appId=${config.applicationId} skipPriorArt=${config.skipPriorArtSearch} useAIClaims=${config.useAIClaims}`);
+    plog(`inventionDesc=${inventionDesc.length}chars hasDesc=${hasInventionDescription}`);
+
     if (!config.skipPriorArtSearch) {
       updateProgress(`Searching prior art for "${config.title.substring(0, 50)}"...`);
       let priorArtCount = 0;
@@ -123,8 +147,9 @@ export async function generateCompletePatentApplication(
         });
         priorArtCount = paResults?.length || 0;
         topPriorArt = (paResults || []).slice(0, 3).map((r: any) => r.patent_title || r.title || 'Untitled').join('|');
+        plog(`prior_art_search ok count=${priorArtCount}`);
       } catch (priorArtError) {
-        console.error('Prior art search failed, continuing pipeline:', priorArtError);
+        plog(`prior_art_search ERROR: ${priorArtError instanceof Error ? priorArtError.message : String(priorArtError)}`);
       }
       updateProgress('Prior art search completed', 'completed', { priorArtCount, topPriorArt });
     }
@@ -132,17 +157,24 @@ export async function generateCompletePatentApplication(
     updateProgress('Extracting technical features from codebase...');
 
     let features;
-    if (hasInventionDescription) {
-      const inventionInput: InventionInput = {
-        title: config.title,
-        description: inventionDesc,
-        technicalField: (appData?.field_of_invention as string) || undefined,
-        problemSolved: (meta.problem_solved as string) || undefined,
-        keyFeatures: (meta.key_features as string[]) || undefined
-      };
-      features = await extractFeaturesFromInvention(inventionInput, config.projectId);
-    } else {
-      features = await extractCodebaseFeatures(config.projectId);
+    try {
+      if (hasInventionDescription) {
+        const inventionInput: InventionInput = {
+          title: config.title,
+          description: inventionDesc,
+          technicalField: (appData?.field_of_invention as string) || undefined,
+          problemSolved: (meta.problem_solved as string) || undefined,
+          keyFeatures: (meta.key_features as string[]) || undefined
+        };
+        features = await extractFeaturesFromInvention(inventionInput, config.projectId);
+      } else {
+        features = await extractCodebaseFeatures(config.projectId);
+      }
+      plog(`feature_extraction ok count=${features.features.length}`);
+    } catch (featErr) {
+      plog(`feature_extraction ERROR: ${featErr instanceof Error ? featErr.message : String(featErr)}`);
+      await saveLog('feature_extraction_failed');
+      throw featErr;
     }
     const topFeatures = features.features.slice(0, 5).map((f: any) => f.name || f.feature_name || 'Feature').join('|');
     updateProgress('Feature extraction completed', 'completed', { featureCount: features.features.length, topFeatures });
@@ -155,8 +187,10 @@ export async function generateCompletePatentApplication(
         config.applicationId,
         config.userId
       );
+      plog(`novelty_analysis ok score=${noveltyAnalysis.overallScore}`);
     } catch (noveltyError) {
-      console.error('Novelty analysis failed, using defaults:', noveltyError);
+      plog(`novelty_analysis ERROR: ${noveltyError instanceof Error ? noveltyError.message : String(noveltyError)}`);
+      await saveLog('novelty_analysis_failed');
       noveltyAnalysis = {
         analysisId: '',
         overallScore: 0,
@@ -181,8 +215,9 @@ export async function generateCompletePatentApplication(
           config.applicationId,
           config.userId
         );
+        plog('differentiation ok');
       } catch (diffError) {
-        console.error('Differentiation analysis failed, continuing pipeline:', diffError);
+        plog(`differentiation ERROR: ${diffError instanceof Error ? diffError.message : String(diffError)}`);
       }
       updateProgress('Differentiation analysis completed', 'completed');
     }
@@ -192,15 +227,17 @@ export async function generateCompletePatentApplication(
     let priorArt: any[] = [];
     try {
       priorArt = await getPriorArtResults(config.applicationId);
+      plog(`getPriorArtResults ok count=${priorArt.length}`);
     } catch (priorArtLoadError) {
-      console.error('Failed to load prior art results, continuing without:', priorArtLoadError);
+      plog(`getPriorArtResults ERROR: ${priorArtLoadError instanceof Error ? priorArtLoadError.message : String(priorArtLoadError)}`);
     }
 
     let differentiationReports: DifferentiationReport[] = [];
     try {
       differentiationReports = await getDifferentiationReports(config.applicationId);
+      plog(`getDifferentiationReports ok count=${differentiationReports.length}`);
     } catch (drError) {
-      console.error('Failed to load differentiation reports:', drError);
+      plog(`getDifferentiationReports ERROR: ${drError instanceof Error ? drError.message : String(drError)}`);
     }
 
     let existingDrawings: any[] | null = null;
@@ -211,8 +248,9 @@ export async function generateCompletePatentApplication(
         .eq('application_id', config.applicationId)
         .order('figure_number', { ascending: true });
       existingDrawings = drawingsData;
+      plog(`existingDrawings ok count=${drawingsData?.length ?? 0}`);
     } catch (drawingsLoadError) {
-      console.error('Failed to load existing drawings:', drawingsLoadError);
+      plog(`existingDrawings ERROR: ${drawingsLoadError instanceof Error ? drawingsLoadError.message : String(drawingsLoadError)}`);
     }
 
     const inventionContext: InventionContext | undefined = hasInventionDescription ? {
@@ -221,6 +259,7 @@ export async function generateCompletePatentApplication(
       problemSolved: (meta.problem_solved as string) || undefined
     } : undefined;
 
+    plog('starting spec generation');
     let specification: SpecificationSections | null = null;
     try {
       specification = await generateIntelligentSpecification(
@@ -232,6 +271,7 @@ export async function generateCompletePatentApplication(
         config.projectId,
         existingDrawings || undefined
       );
+      plog(`spec_generation ok field=${specification.field.length}chars bg=${specification.background.length}chars`);
 
       const concatenatedSpecification = formatSpecificationSections(specification);
 
@@ -250,16 +290,19 @@ export async function generateCompletePatentApplication(
         .eq('id', config.applicationId);
 
       if (specSaveError) {
-        console.error('Spec save error:', specSaveError);
+        plog(`spec_save ERROR: ${specSaveError.message}`);
+        await saveLog('spec_save_failed');
         await (supabase as any)
           .from('patent_applications')
           .update({ specification_generation_status: 'failed', updated_at: new Date().toISOString() })
           .eq('id', config.applicationId);
       } else {
+        plog('spec_save ok');
         updateProgress('Specification generation completed', 'completed', { sections: 5 });
       }
     } catch (specError) {
-      console.error('Specification generation failed, continuing to claims/drawings:', specError);
+      plog(`spec_generation ERROR: ${specError instanceof Error ? specError.message : String(specError)}`);
+      await saveLog('spec_generation_failed');
       await (supabase as any)
         .from('patent_applications')
         .update({ specification_generation_status: 'failed', updated_at: new Date().toISOString() })
@@ -269,6 +312,7 @@ export async function generateCompletePatentApplication(
     if (config.useAIClaims) {
       try {
         updateProgress('Generating independent and dependent claims...');
+        plog('starting claims generation');
         const claims = await generateAIEnhancedClaims(
           config.applicationId,
           features.features,
@@ -277,6 +321,7 @@ export async function generateCompletePatentApplication(
           config.title,
           inventionDesc
         );
+        plog(`claims_generation ok count=${claims.length}`);
         const firstIndependent = claims.find((c: any) => c.claim_type === 'independent');
         const firstClaimPreview = firstIndependent ? firstIndependent.claim_text.substring(0, 200) : '';
         updateProgress('Claims generation completed', 'completed', { claimsCount: claims.length, firstClaimPreview });
@@ -286,7 +331,8 @@ export async function generateCompletePatentApplication(
           .update({ claims_generation_status: 'completed', updated_at: new Date().toISOString() })
           .eq('id', config.applicationId);
       } catch (claimsError) {
-        console.error('Claims generation failed, continuing to drawings:', claimsError);
+        plog(`claims_generation ERROR: ${claimsError instanceof Error ? claimsError.message : String(claimsError)}`);
+        await saveLog('claims_generation_failed');
         await (supabase as any)
           .from('patent_applications')
           .update({ claims_generation_status: 'failed', updated_at: new Date().toISOString() })
@@ -296,7 +342,9 @@ export async function generateCompletePatentApplication(
 
     try {
       updateProgress('Generating patent drawings from features...');
+      plog('starting drawings generation');
       const drawings = await generateDrawingsForApplication(config.applicationId, config.projectId);
+      plog(`drawings_generation ok count=${drawings.length}`);
       updateProgress('Drawings generation completed', 'completed', { drawingsCount: drawings.length });
 
       await (supabase as any)
@@ -308,12 +356,16 @@ export async function generateCompletePatentApplication(
         })
         .eq('id', config.applicationId);
     } catch (drawingsError) {
-      console.error('Drawings generation failed:', drawingsError);
+      plog(`drawings_generation ERROR: ${drawingsError instanceof Error ? drawingsError.message : String(drawingsError)}`);
+      await saveLog('drawings_generation_failed');
       await (supabase as any)
         .from('patent_applications')
         .update({ drawings_generation_status: 'failed', updated_at: new Date().toISOString() })
         .eq('id', config.applicationId);
     }
+
+    plog('pipeline complete');
+    await saveLog('completed');
 
     return {
       success: true,
@@ -325,12 +377,15 @@ export async function generateCompletePatentApplication(
     };
 
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    plog(`OUTER_CATCH ERROR: ${errMsg}`);
+    await saveLog(`outer_catch: ${errMsg.substring(0, 120)}`);
     console.error('Patent generation error:', error);
     updateProgress('Generation failed', 'completed');
     return {
       success: false,
       applicationId: config.applicationId,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
+      error: errMsg
     };
   }
 }
