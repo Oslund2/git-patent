@@ -8,14 +8,29 @@ export default async function handler(req: Request, _context: Context) {
     });
   }
 
-  const supabaseUrl = Netlify.env.get("VITE_SUPABASE_URL");
   const serviceKey = Netlify.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-  if (!supabaseUrl || !serviceKey) {
-    return new Response(JSON.stringify({ error: "Supabase not configured" }), {
+  if (!serviceKey) {
+    return new Response(JSON.stringify({ error: "SUPABASE_SERVICE_ROLE_KEY not configured" }), {
       status: 503,
       headers: { "Content-Type": "application/json" },
     });
+  }
+
+  // Derive Supabase URL from the service role JWT (VITE_ vars are build-scoped, not function-scoped)
+  let supabaseUrl: string;
+  try {
+    const jwtPayload = JSON.parse(
+      Buffer.from(serviceKey.split(".")[1], "base64").toString("utf-8")
+    );
+    if (!jwtPayload.ref) throw new Error("No ref claim in JWT");
+    supabaseUrl = `https://${jwtPayload.ref}.supabase.co`;
+  } catch (jwtErr) {
+    console.error("[pipeline-write] JWT parse error:", jwtErr);
+    return new Response(
+      JSON.stringify({ error: "Cannot parse SUPABASE_SERVICE_ROLE_KEY" }),
+      { status: 503, headers: { "Content-Type": "application/json" } }
+    );
   }
 
   let body: { applicationId?: string; updates?: Record<string, unknown> };

@@ -12,6 +12,9 @@
 [functions."ai-generate"]
   timeout = 26
 
+[functions."pipeline-write"]
+  timeout = 10
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
