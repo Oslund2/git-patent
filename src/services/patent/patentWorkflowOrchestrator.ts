@@ -216,7 +216,7 @@ export async function generateCompletePatentApplication(
       .eq('id', config.applicationId);
 
     if (specSaveError) {
-      console.error('Failed to save specification:', specSaveError);
+      throw new Error(`Failed to save specification to database: ${specSaveError.message}`);
     }
 
     updateProgress('Specification generation completed', 'completed', { sections: 5 });
@@ -234,11 +234,25 @@ export async function generateCompletePatentApplication(
       const firstIndependent = claims.find((c: any) => c.claim_type === 'independent');
       const firstClaimPreview = firstIndependent ? firstIndependent.claim_text.substring(0, 200) : '';
       updateProgress('Claims generation completed', 'completed', { claimsCount: claims.length, firstClaimPreview });
+
+      await (supabase as any)
+        .from('patent_applications')
+        .update({ claims_generation_status: 'completed', updated_at: new Date().toISOString() })
+        .eq('id', config.applicationId);
     }
 
     updateProgress('Generating patent drawings from features...');
     const drawings = await generateDrawingsForApplication(config.applicationId, config.projectId);
     updateProgress('Drawings generation completed', 'completed', { drawingsCount: drawings.length });
+
+    await (supabase as any)
+      .from('patent_applications')
+      .update({
+        drawings_generation_status: 'completed',
+        full_application_status: 'completed',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', config.applicationId);
 
     return {
       success: true,
