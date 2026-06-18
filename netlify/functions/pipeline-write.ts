@@ -17,21 +17,10 @@ export default async function handler(req: Request, _context: Context) {
     });
   }
 
-  // Derive Supabase URL from the service role JWT (VITE_ vars are build-scoped, not function-scoped)
-  let supabaseUrl: string;
-  try {
-    const jwtPayload = JSON.parse(
-      Buffer.from(serviceKey.split(".")[1], "base64").toString("utf-8")
-    );
-    if (!jwtPayload.ref) throw new Error("No ref claim in JWT");
-    supabaseUrl = `https://${jwtPayload.ref}.supabase.co`;
-  } catch (jwtErr) {
-    console.error("[pipeline-write] JWT parse error:", jwtErr);
-    return new Response(
-      JSON.stringify({ error: "Cannot parse SUPABASE_SERVICE_ROLE_KEY" }),
-      { status: 503, headers: { "Content-Type": "application/json" } }
-    );
-  }
+  // SUPABASE_URL is the project REST endpoint — not a secret, safe to set in Netlify env.
+  // Standard Supabase service role JWTs do not include a `ref` claim, so we cannot
+  // derive the URL from the token. Use the env var directly.
+  const supabaseUrl = Netlify.env.get("SUPABASE_URL") || "https://njztfeteegyufzlspevn.supabase.co";
 
   let body: { applicationId?: string; updates?: Record<string, unknown> };
   try {

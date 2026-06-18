@@ -1,7 +1,5 @@
-/**
- * Routes patent_applications UPDATE calls through a service-role Netlify function,
- * bypassing the client-side Supabase session entirely.
- */
+import { supabase } from './supabase';
+
 export async function pipelineUpdate(
   applicationId: string,
   updates: Record<string, unknown>
@@ -10,17 +8,16 @@ export async function pipelineUpdate(
     console.error("[pipelineUpdate] called with empty applicationId");
     return;
   }
-  try {
-    const resp = await fetch("/.netlify/functions/pipeline-write", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ applicationId, updates }),
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({})) as Record<string, unknown>;
-      console.error("[pipelineUpdate] HTTP error:", resp.status, err.error, err.detail ?? "");
-    }
-  } catch (e) {
-    console.error("[pipelineUpdate] fetch error:", e instanceof Error ? e.message : e);
+
+  const { data, error } = await (supabase as any)
+    .from('patent_applications')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', applicationId)
+    .select('id');
+
+  if (error) {
+    console.error("[pipelineUpdate] write error:", error.code, error.message, error.details, "appId:", applicationId);
+  } else if (!data || data.length === 0) {
+    console.warn("[pipelineUpdate] 0 rows updated for appId:", applicationId);
   }
 }
