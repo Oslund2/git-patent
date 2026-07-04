@@ -1,10 +1,25 @@
 import type { Context } from "@netlify/functions";
 
-// Default to Claude Opus 4.8 for high-reasoning tasks; override via ANTHROPIC_MODEL.
-// Spec/drawing/synthesis calls use Sonnet (faster, well within the 23s timeout).
+// Netlify synchronous functions are hard-capped at 26s. Any Claude call that
+// needs to GENERATE more than ~2.5k tokens cannot finish in time on Opus/Sonnet
+// (Opus/Sonnet generate ~40-50 tok/s → 4k tokens ≈ 90s), so those calls 502.
+// Model tiers by speed:
+//   CLAUDE_MODEL  (Opus 4.8) — highest reasoning, only safe for SMALL outputs.
+//   FAST_MODEL    (Sonnet 4.6) — mid; only safe for small per-section outputs.
+//   FASTEST_MODEL (Haiku 4.5) — ~5-10x faster; the only tier that fits large
+//                 outputs (extraction/analysis, claims, novelty) inside 26s.
 const CLAUDE_MODEL = Netlify.env.get("ANTHROPIC_MODEL") || "claude-opus-4-8";
 const FAST_MODEL = Netlify.env.get("ANTHROPIC_MODEL_FAST") || "claude-sonnet-4-6";
+const FASTEST_MODEL = Netlify.env.get("ANTHROPIC_MODEL_FASTEST") || "claude-haiku-4-5";
 const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
+
+// High-volume / large-output features that MUST use the fastest model to fit the
+// 26s Netlify budget. Extraction/analysis quality is fine on Haiku.
+const FASTEST_MODEL_FEATURES = new Set([
+  "codebase_analysis",
+  "patent_feature_extraction",
+  "feature_synthesis",
+]);
 
 // Feature areas that use the fast model (latency-sensitive, prose output)
 const FAST_MODEL_FEATURES = new Set([
@@ -90,7 +105,11 @@ export default async function handler(req: Request, _context: Context) {
   const maxTokens =
     body.maxTokens || FEATURE_TOKEN_LIMITS[featureArea] || 2048;
   const temperature = body.temperature ?? 0.3;
-  const model = FAST_MODEL_FEATURES.has(featureArea) ? FAST_MODEL : CLAUDE_MODEL;
+  const model = FASTEST_MODEL_FEATURES.has(featureArea)
+    ? FASTEST_MODEL
+    : FAST_MODEL_FEATURES.has(featureArea)
+      ? FAST_MODEL
+      : CLAUDE_MODEL;
 
   const send = (includeTemperature: boolean) =>
     fetch(ANTHROPIC_API, {
@@ -108,7 +127,8 @@ export default async function handler(req: Request, _context: Context) {
         ...(includeTemperature ? { temperature } : {}),
         messages: [{ role: "user", content: body.prompt }],
       }),
-      signal: AbortSignal.timeout(23000),
+      // Use the full Netlify budget (sync cap is 26s) minus ~1s of overhead.
+      signal: AbortSignal.timeout(25000),
     });
 
   try {
