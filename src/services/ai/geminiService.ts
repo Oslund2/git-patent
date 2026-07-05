@@ -22,17 +22,18 @@ export function checkGeminiConfiguration(): { configured: boolean; error?: strin
   return { configured: true };
 }
 
-// Features safe to run synchronously (small output, finishes well within 26s):
-// the per-section spec calls, the abstract, and the Haiku-routed extraction
-// steps. Everything else routes through the background function.
+// Features safe to run synchronously = SMALL, bounded output that always
+// finishes within Netlify's ~26s cap: the per-section spec calls, the abstract,
+// and the tiny feature-synthesis call. Everything else — including
+// codebase_analysis / patent_feature_extraction, which can emit large outputs
+// (measured: Haiku hits ~36s at 4096 tokens, past the sync cap) — routes through
+// the background function (Haiku speed + 15-min budget, no timeout).
 const SYNC_FEATURES = new Set<string>([
   'patent_specification_field',
   'patent_specification_background',
   'patent_specification_summary',
   'patent_specification_detailed',
   'patent_abstract_generation',
-  'codebase_analysis',
-  'patent_feature_extraction',
   'feature_synthesis',
 ]);
 
