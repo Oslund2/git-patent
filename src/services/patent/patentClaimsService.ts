@@ -225,7 +225,7 @@ async function generateIndependentClaims(
     DEFAULT_INDEPENDENT_CLAIMS,
     {
       maxRetries: 2,
-      timeoutMs: 90000,
+      timeoutMs: 300000, // claims run via the background function; match its 5-min poll deadline
       featureArea: 'patent_claims',
       onRetry: (attempt, error) => {
         console.log(`Independent claims generation retry ${attempt}: ${error.message}`);
@@ -329,7 +329,7 @@ async function generateDependentClaims(
     DEFAULT_DEPENDENT_CLAIMS,
     {
       maxRetries: 2,
-      timeoutMs: 90000,
+      timeoutMs: 300000, // claims run via the background function; match its 5-min poll deadline
       featureArea: 'patent_claims',
       onRetry: (attempt, error) => {
         console.log(`Dependent claims generation retry ${attempt}: ${error.message}`);

@@ -19,7 +19,10 @@ export interface AIRequestResult<T> {
 const DEFAULT_OPTIONS: AIRequestOptions = {
   maxRetries: 3,
   retryDelayMs: 1000,
-  timeoutMs: 60000
+  // Heavy calls route through the background function (up to a 5-min client poll
+  // in geminiService). Sync calls self-abort at 28s regardless, so this only
+  // governs the background path.
+  timeoutMs: 300000
 };
 
 function sleep(ms: number): Promise<void> {
