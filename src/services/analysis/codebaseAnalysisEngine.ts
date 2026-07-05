@@ -139,7 +139,10 @@ export async function analyzeCodebase(
     try {
       const prompt = createBatchPrompt(batch, i, readmeContent);
       const response = await generateText(prompt, 'codebase_analysis', {
-        maxTokens: 3000,
+        // Runs on the background function now (no 26s cap), so give the feature
+        // JSON room to finish — 3000 truncated mid-array (stop=max_tokens) and
+        // broke parsing, yielding no persisted features.
+        maxTokens: 8000,
         temperature: 0.2,
       });
       const features = parseFeaturesFromResponse(response);
